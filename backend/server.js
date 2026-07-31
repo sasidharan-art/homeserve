@@ -20,6 +20,11 @@ dns.setServers(["1.1.1.1", "8.8.8.8"]);
 // ===================================
 
 const app = express();
+
+// Render runs behind a reverse proxy.
+// Required for express-rate-limit and correct client IP handling.
+app.set("trust proxy", 1);
+
 const server = http.createServer(app);
 
 // ===================================
@@ -33,7 +38,7 @@ const io = new Server(server, {
     }
 });
 
-// Make io available in all routes
+// Make Socket.IO available inside routes.
 app.set("io", io);
 
 // ===================================
@@ -41,12 +46,29 @@ app.set("io", io);
 // ===================================
 
 app.use(cors());
-app.use(express.json({ limit: "2mb" }));
+
+app.use(
+    express.json({
+        limit: "2mb"
+    })
+);
+
+app.use(
+    express.urlencoded({
+        extended: true,
+        limit: "2mb"
+    })
+);
+
+// Serve frontend files from the frontend folder.
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// Prevent stale frontend/API responses during local development.
+// Prevent stale frontend and API responses during local development.
 app.use((req, res, next) => {
-    if (process.env.NODE_ENV !== "production") res.set("Cache-Control", "no-store");
+    if (process.env.NODE_ENV !== "production") {
+        res.set("Cache-Control", "no-store");
+    }
+
     next();
 });
 
@@ -54,21 +76,16 @@ app.use((req, res, next) => {
 // MongoDB Connection
 // ===================================
 
-mongoose.connect(process.env.MONGO_URI)
-.then(() => {
-
-    console.log("✅ MongoDB connected successfully");
-
-})
-.catch((err) => {
-
-    console.log("❌ MongoDB Connection Error");
-
-    console.log(err);
-
-    process.exit(1);
-
-});
+mongoose
+    .connect(process.env.MONGO_URI)
+    .then(() => {
+        console.log("✅ MongoDB connected successfully");
+    })
+    .catch((err) => {
+        console.error("❌ MongoDB Connection Error");
+        console.error(err);
+        process.exit(1);
+    });
 
 // ===================================
 // Import Routes
@@ -89,25 +106,30 @@ const chatRoutes = require("./routes/chatRoutes");
 // ===================================
 
 app.use("/api/auth", authRoutes);
-
 app.use("/api/services", serviceRoutes);
-
 app.use("/api/bookings", bookingRoutes);
-
 app.use("/api/provider", providerRoutes);
-
 app.use("/api/admin", adminRoutes);
-
 app.use("/api/reviews", reviewRoutes);
-
 app.use("/api/notifications", notificationRoutes);
-
 app.use("/api/coupons", couponRoutes);
-
 app.use("/api/chat", chatRoutes);
 
+// ===================================
+// Health Check
+// ===================================
+
 app.get("/api/health", (req, res) => {
-    res.json({ success: true, service: "HomeServe API", uptime: Math.floor(process.uptime()), database: mongoose.connection.readyState === 1 ? "Connected" : "Unavailable", checkedAt: new Date().toISOString() });
+    res.status(200).json({
+        success: true,
+        service: "HomeServe API",
+        uptime: Math.floor(process.uptime()),
+        database:
+            mongoose.connection.readyState === 1
+                ? "Connected"
+                : "Unavailable",
+        checkedAt: new Date().toISOString()
+    });
 });
 
 // ===================================
@@ -119,19 +141,48 @@ app.get("/", (req, res) => {
 });
 
 // ===================================
-// Socket.IO
+// Socket.IO Events
 // ===================================
 
 io.on("connection", (socket) => {
-
-    console.log("🟢 User Connected :", socket.id);
+    console.log("🟢 User Connected:", socket.id);
 
     socket.on("disconnect", () => {
-
-        console.log("🔴 User Disconnected :", socket.id);
-
+        console.log("🔴 User Disconnected:", socket.id);
     });
+});
 
+// ===================================
+// 404 Handler
+// ===================================
+
+// Keep this after all API and frontend routes.
+app.use((req, res) => {
+    if (req.path.startsWith("/api/")) {
+        return res.status(404).json({
+            success: false,
+            message: "API route not found"
+        });
+    }
+
+    return res.status(404).send("Page not found");
+});
+
+// ===================================
+// Global Error Handler
+// ===================================
+
+app.use((err, req, res, next) => {
+    console.error("Unhandled server error:", err);
+
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+    });
 });
 
 // ===================================
@@ -140,8 +191,6 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-
+server.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on port ${PORT}`);
-
 });
