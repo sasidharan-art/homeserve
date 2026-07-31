@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>HomeServe Invoice</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="invoice-page">
+  <main class="invoice-shell">
+    <div class="invoice-toolbar no-print">
+      <a class="btn btn-secondary" href="my-bookings.html">← My Bookings</a>
+      <button class="btn btn-primary" id="printInvoice" type="button">Download / Print PDF</button>
+    </div>
+    <section class="invoice-paper" id="invoicePaper" aria-live="polite">
+      <div class="invoice-loading">Preparing your invoice...</div>
+    </section>
+  </main>
+  <script src="js/runtime-v80.js?v=8000"></script><script src="js/invoice-v71.js?v=7101"></script>
+</body>
+</html>

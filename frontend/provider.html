@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Worker Workspace | HomeServe</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/provider-pro.css?v=5.0">
+</head>
+<body class="provider-pro">
+  <div class="provider-bg" aria-hidden="true"><span></span><span></span><span></span></div>
+  <header class="provider-nav">
+    <a class="provider-brand" href="provider.html"><span class="provider-logo">H</span><span><strong>HomeServe</strong><small>Worker Workspace</small></span></a>
+    <div class="provider-nav-actions">
+      <button class="icon-button" id="refreshBtn" title="Refresh dashboard" aria-label="Refresh dashboard">↻</button>
+      <button class="availability-switch" id="availabilityBtn" type="button" aria-pressed="true"><span class="availability-dot"></span><span id="availabilityText">Available</span></button>
+      <button class="logout-button" id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <main class="provider-main">
+    <section class="provider-hero reveal-provider">
+      <div>
+        <span class="provider-kicker">Provider command centre</span>
+        <h1 id="providerName">Welcome back</h1>
+        <p>Manage assigned work, share live journey location, collect admin-controlled payments and complete every service safely.</p><div class="worker-profile-line" id="workerProfileLine">Loading worker profile…</div>
+        <div class="hero-actions"><button class="primary-action" data-scroll="requestsSection">View open requests</button><button class="secondary-action" data-scroll="scheduleSection">Today's schedule</button></div>
+      </div>
+      <div class="performance-ring" aria-label="Completion performance"><div><strong id="performanceValue">0%</strong><span>completion</span></div></div>
+    </section>
+
+    <section class="worker-verification-card reveal-provider" id="workerVerificationCard">
+      <div><span class="section-label">Trust profile</span><h2>Worker verification</h2><p id="workerVerificationText">Loading verification status…</p></div>
+      <div class="worker-verification-meta"><span id="workerVerificationStatus">Loading</span><small id="workerBackgroundStatus">Background: —</small></div>
+    </section>
+
+    <section class="provider-stats reveal-provider" aria-label="Provider statistics">
+      <article><span class="stat-icon blue">◈</span><div><small>Open requests</small><strong id="openCount">0</strong><p>Available to accept</p></div></article>
+      <article><span class="stat-icon cyan">⌁</span><div><small>Active jobs</small><strong id="activeCount">0</strong><p>Accepted or travelling</p></div></article>
+      <article><span class="stat-icon green">✓</span><div><small>Completed</small><strong id="completedCount">0</strong><p>All-time jobs</p></div></article>
+      <article><span class="stat-icon amber">₹</span><div><small>Total earnings</small><strong id="earningsCount">₹0</strong><p>Completed bookings</p></div></article>
+    </section>
+
+    <section class="provider-grid reveal-provider">
+      <article class="provider-panel" id="scheduleSection">
+        <div class="panel-heading"><div><span>Schedule</span><h2>Today's jobs</h2></div><strong class="count-pill" id="todayCount">0</strong></div>
+        <div id="todaySchedule" class="schedule-list"><div class="provider-skeleton"></div><div class="provider-skeleton"></div></div>
+      </article>
+      <article class="provider-panel earnings-panel">
+        <div class="panel-heading"><div><span>Performance</span><h2>Six-month earnings</h2></div></div>
+        <div id="earningsChart" class="earnings-chart" aria-label="Monthly earnings chart"></div>
+        <div class="chart-legend"><span><i></i>Completed-service value</span></div>
+      </article>
+    </section>
+
+    <section class="provider-panel jobs-panel reveal-provider" id="requestsSection">
+      <div class="jobs-toolbar">
+        <div><span class="section-label">Job management</span><h2>Requests and assigned work</h2></div>
+        <div class="job-controls"><label class="provider-search"><span>⌕</span><input id="jobSearch" placeholder="Search customer, service or address"></label><select id="statusFilter"><option value="all">All statuses</option><option value="Pending">Open requests</option><option value="Accepted">Accepted</option><option value="On the Way">On the way</option><option value="Completed">Completed</option></select></div>
+      </div>
+      <div id="bookingList" class="provider-job-grid"><div class="provider-skeleton card"></div><div class="provider-skeleton card"></div><div class="provider-skeleton card"></div></div>
+    </section>
+
+    <section class="provider-panel reveal-provider worker-reviews-panel"><div class="panel-heading"><div><span>Customer feedback</span><h2>Ratings and recent reviews</h2></div><strong class="count-pill" id="providerRatingBadge">New</strong></div><div class="provider-rating-summary"><strong id="providerAverageRating">0.0</strong><span>★★★★★</span><p id="providerReviewCount">No reviews yet</p></div><div id="providerReviewList" class="provider-review-list"><div class="provider-skeleton"></div></div></section>
+  </main>
+
+  <div class="provider-modal" id="locationModal" hidden>
+    <div class="provider-modal-card"><div class="provider-modal-head"><div><span class="section-label">Customer navigation</span><h2 id="locationModalTitle">Customer location</h2></div><button type="button" data-close-modal="locationModal">×</button></div><iframe id="customerMapFrame" class="customer-map-frame" title="Customer location map" loading="lazy"></iframe><p id="locationAccuracy"></p><a id="openMapsLink" class="primary-action" target="_blank" rel="noopener">Open navigation</a></div>
+  </div>
+  <div class="provider-modal" id="paymentModal" hidden>
+    <div class="provider-modal-card">
+      <div class="provider-modal-head"><div><span class="section-label">Collect payment</span><h2 id="providerPaymentTitle">Choose payment method</h2></div><button type="button" data-close-modal="paymentModal">×</button></div>
+      <div class="provider-payment-methods">
+        <button type="button" id="chooseUpiPayment">▦ UPI QR</button>
+        <button type="button" id="chooseCashPayment">₹ Cash on Delivery</button>
+      </div>
+      <div class="provider-qr-wrap" id="providerQrWrap" hidden><div id="providerQrCode"></div><strong id="providerQrAmount">₹0</strong><p id="providerQrNote"></p></div>
+      <div class="provider-cash-wrap" id="providerCashWrap" hidden><strong>Collect cash from the customer</strong><p>Confirm the full amount before marking this booking as paid.</p></div>
+      <label class="provider-payment-reference" id="providerPaymentReferenceWrap" hidden>Transaction reference (optional)<input id="providerPaymentReference" maxlength="80" placeholder="Enter UTR or transaction ID"></label>
+      <div class="provider-payment-status">Status: <strong id="providerPaymentStatus">Unpaid</strong></div>
+      <button type="button" class="primary-action provider-mark-paid" id="providerMarkPaid" disabled>Mark unpaid as paid</button>
+    </div>
+  </div>
+
+  <div id="providerToast" class="provider-toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="js/runtime-v80.js?v=8000"></script><script src="js/socket.js"></script>
+  <script src="js/provider-v61.js?v=6200"></script>
+<div class="build-badge">Stable 8.0</div>  
+  <script src="js/notifications-v62.js"></script>
+  <script src="js/provider-verification-v74.js"></script>
+  <link rel="stylesheet" href="css/worker-verification-v74.css">
+</body>
+</html>

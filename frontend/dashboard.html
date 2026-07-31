@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Customer Dashboard | HomeServe</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="shell customer-dashboard-page">
+  <div class="dashboard-bg" aria-hidden="true"><span class="dashboard-orb orb-one"></span><span class="dashboard-orb orb-two"></span><span class="dashboard-orb orb-three"></span><span class="dashboard-grid-pattern"></span></div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><a class="brand" href="dashboard.html"><span class="brand-mark">H</span><span>HomeServe</span></a><button class="sidebar-close-button" id="closeSidebar" aria-label="Close menu">×</button></div>
+    <div class="sidebar-content"><nav class="sidebar-menu">
+      <a class="sidebar-link active" href="dashboard.html"><span class="sidebar-icon">⌂</span>Dashboard</a>
+      <a class="sidebar-link" href="my-bookings.html"><span class="sidebar-icon">▤</span>My Bookings</a>
+      <a class="sidebar-link" href="booking.html"><span class="sidebar-icon">＋</span>Book Service</a>
+      <a class="sidebar-link" href="contact.html"><span class="sidebar-icon">✉</span>Support</a>
+      <button class="sidebar-link" id="logoutBtn"><span class="sidebar-icon">⇥</span>Logout</button>
+    </nav></div>
+    <div class="sidebar-footer"><div class="sidebar-user"><div class="user-avatar" id="userAvatar">U</div><div class="user-information"><span class="user-name" id="sidebarUserName">Customer</span><span class="user-role">Customer account</span></div></div></div>
+  </aside>
+
+  <header class="topbar dashboard-topbar">
+    <div class="topbar-inner">
+      <div class="header-left"><button class="menu-btn" id="openSidebar" aria-expanded="false" aria-label="Open menu">☰</button><a class="brand" href="dashboard.html"><span class="brand-mark">H</span><span>HomeServe</span></a></div>
+      <div class="header-actions premium-header-actions">
+        <button class="icon-action" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">☾</button>
+        <div class="notification-wrap"><button class="icon-action" id="notificationBtn" aria-label="Notifications">🔔<b>3</b></button><div class="notification-panel" id="notificationPanel"><div class="notification-title"><strong>Notifications</strong><span>3 new</span></div><article><i>✓</i><div><b>Booking made easier</b><p>Try the new step-by-step booking flow.</p></div></article><article><i>₹</i><div><b>Transparent pricing</b><p>Review the full price before confirming.</p></div></article><article><i>★</i><div><b>Trusted professionals</b><p>Book verified home-service experts.</p></div></article></div></div>
+        <a class="btn btn-secondary" href="my-bookings.html">My bookings</a><a class="btn btn-primary" href="#servicesSection">Browse services</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main dashboard-main">
+    <section class="customer-hero premium-customer-hero reveal-on-scroll">
+      <div class="customer-hero-copy">
+        <span class="hero-badge">India's convenient home-care marketplace</span>
+        <h1 id="welcome">Welcome</h1>
+        <p>Trusted professionals for repairs, cleaning and home improvements—booked in just a few clicks.</p>
+        <div class="hero-search"><span>⌕</span><input id="heroSearch" type="search" placeholder="What service do you need today?"><button id="heroSearchBtn">Search</button></div>
+        <div class="hero-actions"><a class="btn btn-light" href="#servicesSection">Book a service</a><a class="hero-text-link" href="my-bookings.html">Track a booking →</a></div>
+        <div class="hero-rating"><span class="avatar-stack"><i>J</i><i>P</i><i>R</i></span><div><b>4.9/5 customer rating</b><small>Trusted by happy households</small></div></div>
+      </div>
+      <div class="customer-hero-art" aria-hidden="true">
+        <span class="floating-service service-float-one">⚡ Electrician</span><span class="floating-service service-float-two">❄️ AC Repair</span><span class="floating-service service-float-three">✨ Cleaning</span>
+        <div class="hero-home-card"><div class="hero-technician">👨‍🔧</div><span class="home-roof"></span><div class="home-body"><span>✓</span></div><small>Home care made simple</small></div>
+      </div>
+    </section>
+
+
+    <section class="customer-command-center reveal-on-scroll" aria-label="Customer booking overview">
+      <div class="command-overview">
+        <div class="command-heading"><span>Your HomeServe overview</span><h2>Everything important, at a glance</h2><p>Track your next visit, review activity and quickly start a new request.</p></div>
+        <div class="customer-metric-grid">
+          <article><i>▣</i><div><strong id="metricTotalBookings">0</strong><span>Total bookings</span></div></article>
+          <article><i>◷</i><div><strong id="metricActiveBookings">0</strong><span>Active services</span></div></article>
+          <article><i>✓</i><div><strong id="metricCompletedBookings">0</strong><span>Completed</span></div></article>
+          <article><i>₹</i><div><strong id="metricTotalSpent">₹0</strong><span>Total service value</span></div></article>
+        </div>
+      </div>
+      <div class="dashboard-focus-grid">
+        <article class="upcoming-booking-card" id="upcomingBookingCard">
+          <div class="focus-card-head"><div><span>Next scheduled service</span><h3>Upcoming booking</h3></div><a href="my-bookings.html">View all →</a></div>
+          <div id="upcomingBookingContent" class="booking-overview-loading">Loading your bookings...</div>
+        </article>
+        <article class="quick-action-card">
+          <div class="focus-card-head"><div><span>Useful shortcuts</span><h3>Quick actions</h3></div></div>
+          <div class="customer-quick-actions">
+            <a href="#servicesSection"><i>＋</i><span><b>Book a service</b><small>Find a trusted professional</small></span></a>
+            <a href="my-bookings.html"><i>⌖</i><span><b>Track booking</b><small>Check current service status</small></span></a>
+            <a href="contact.html"><i>?</i><span><b>Get support</b><small>We are here to help</small></span></a>
+            <button type="button" id="showFavoritesAction"><i>♥</i><span><b>Saved services</b><small>View your favourites</small></span></button>
+          </div>
+        </article>
+      </div>
+      <div id="dashboardBookingMessage" class="dashboard-booking-message" role="status"></div>
+    </section>
+
+    <section class="quick-categories reveal-on-scroll"><div class="mini-section-head"><div><span>Explore quickly</span><h2>Popular categories</h2></div><a href="#servicesSection">View all →</a></div><div id="quickCategories" class="quick-category-grid"></div></section>
+
+    <section class="experience-stats reveal-on-scroll">
+      <article><strong data-count="12000">0</strong><span>Bookings completed</span></article><article><strong data-count="800">0</strong><span>Trusted professionals</span></article><article><strong data-count="10">0</strong><span>Service categories</span></article><article><strong data-count="49">0</strong><span>Average rating</span></article>
+    </section>
+
+    <section id="servicesSection" class="services-section reveal-on-scroll">
+      <div class="section-head dashboard-section-head"><div><span class="section-kicker">Recommended for your home</span><h2>Popular home services</h2><p>Choose a service and book a verified professional.</p></div><div class="service-search-wrap"><span>⌕</span><input id="serviceSearch" type="search" placeholder="Search AC, plumbing, cleaning..." autocomplete="off"></div></div>
+      <div id="categoryFilters" class="dashboard-category-filters" aria-label="Service categories"></div><div id="serviceMessage" class="page-message service-status" role="status"></div><div id="services" class="services dashboard-services" aria-live="polite"></div>
+    </section>
+
+    <section id="recentSection" class="recent-services-section reveal-on-scroll" hidden><div class="mini-section-head"><div><span>Continue exploring</span><h2>Recently viewed</h2></div></div><div id="recentServices" class="recent-service-grid"></div></section>
+
+    <section class="why-section reveal-on-scroll"><div class="center-section-head"><span>Why HomeServe?</span><h2>Reliable help without the hassle</h2><p>Everything you need for a safer, simpler service experience.</p></div><div class="why-grid"><article><i>✓</i><h3>Verified professionals</h3><p>Service experts selected for skill, reliability and professionalism.</p></article><article><i>₹</i><h3>Clear pricing</h3><p>See the price breakdown before confirming your booking.</p></article><article><i>⚡</i><h3>Fast booking</h3><p>Choose a service, date and time in a guided booking flow.</p></article><article><i>🛡</i><h3>Customer support</h3><p>Get help with bookings and services whenever you need it.</p></article></div></section>
+
+    <section class="testimonial-section reveal-on-scroll"><div class="center-section-head"><span>Customer stories</span><h2>People love the convenience</h2></div><div class="testimonial-track"><article><div>★★★★★</div><p>“The electrician arrived on time and completed the work neatly. Booking was extremely easy.”</p><footer><b>Rahul K.</b><span>Electrical service</span></footer></article><article><div>★★★★★</div><p>“A clean, transparent experience from selection to confirmation. The pricing summary was helpful.”</p><footer><b>Priya S.</b><span>Home cleaning</span></footer></article><article><div>★★★★★</div><p>“I found an AC service and selected my time slot in minutes. Very convenient for busy users.”</p><footer><b>Arun M.</b><span>AC repair</span></footer></article></div></section>
+
+    <section class="dashboard-cta reveal-on-scroll"><div><span>Need help at home?</span><h2>Book a trusted professional today.</h2><p>Choose from repair, cleaning and maintenance services.</p></div><a class="btn btn-light" href="#servicesSection">Explore services →</a></section>
+  </main>
+
+  <footer class="premium-footer"><div class="footer-grid"><div><a class="brand" href="dashboard.html"><span class="brand-mark">H</span><span>HomeServe</span></a><p>Reliable professionals for everyday home-service needs.</p></div><div><b>Services</b><a href="#servicesSection">Popular services</a><a href="booking.html">Book service</a><a href="my-bookings.html">Track booking</a></div><div><b>Support</b><a href="contact.html">Contact support</a><a href="#">Safety</a><a href="#">FAQs</a></div><div><b>Company</b><a href="index.html">About HomeServe</a><a href="#">Privacy</a><a href="#">Terms</a></div></div><div class="footer-bottom">© 2026 HomeServe · Built for reliable home care.<span>Blue • Cyan • Emerald</span></div></footer>
+
+  <script src="js/runtime-v80.js?v=8000"></script><script src="js/dashboard.js?v=6"></script><script src="js/sidebar.js"></script><script src="js/ui-effects.js?v=7"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="js/notifications-v62.js"></script>
+<div class="build-badge">Stable 8.0</div></body>
+</html>

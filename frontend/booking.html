@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Smart Booking | HomeServe</title>
+  <link rel="stylesheet" href="css/style.css?v=5.6-20260731">
+</head>
+<body class="shell booking-wizard-page">
+  <div class="booking-background" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header"><a class="brand" href="dashboard.html"><span class="brand-mark">H</span><span>HomeServe</span></a><button class="sidebar-close-button" id="closeSidebar">×</button></div>
+    <div class="sidebar-content"><nav class="sidebar-menu"><a class="sidebar-link" href="dashboard.html"><span class="sidebar-icon">⌂</span>Dashboard</a><a class="sidebar-link" href="my-bookings.html"><span class="sidebar-icon">▤</span>My Bookings</a><a class="sidebar-link active" href="booking.html"><span class="sidebar-icon">＋</span>Book Service</a><button class="sidebar-link" id="logoutBtn"><span class="sidebar-icon">⇥</span>Logout</button></nav></div>
+  </aside>
+
+  <header class="topbar booking-topbar"><div class="topbar-inner"><div class="header-left"><button class="menu-btn" id="openSidebar">☰</button><a class="brand" href="dashboard.html"><span class="brand-mark">H</span><span>Smart booking</span></a></div><div class="header-actions"><a class="btn btn-secondary" href="dashboard.html">← Services</a></div></div></header>
+
+  <main class="main booking-main">
+    <section class="booking-intro">
+      <div><span class="eyebrow">Fast • Secure • Convenient</span><h1>Book a trusted expert in minutes</h1><p>Choose a convenient schedule, enter the service address, and review the full price before confirming.</p></div>
+      <div class="booking-trust"><span>✓ Verified professionals</span><span>✓ Transparent pricing</span><span>✓ Easy cancellation</span></div>
+    </section>
+
+    <section class="wizard-shell">
+      <nav class="wizard-progress" aria-label="Booking progress">
+        <button class="wizard-progress-item active" data-progress="1"><span>1</span><small>Service</small></button>
+        <i></i><button class="wizard-progress-item" data-progress="2"><span>2</span><small>Schedule</small></button>
+        <i></i><button class="wizard-progress-item" data-progress="3"><span>3</span><small>Address</small></button>
+        <i></i><button class="wizard-progress-item" data-progress="4"><span>4</span><small>Review</small></button>
+      </nav>
+
+      <div id="bookingMessage" class="booking-message" role="status"></div>
+
+      <div class="wizard-layout">
+        <form id="bookingForm" class="wizard-card" novalidate>
+          <section class="wizard-step active" data-step="1">
+            <span class="step-label">Step 1 of 4</span><h2>Confirm your service</h2><p class="step-copy">Make sure this is the service you need.</p>
+            <article class="selected-service-card" id="selectedServiceCard"><div class="service-loading">Loading selected service…</div></article>
+            <label class="emergency-option"><input id="emergency" type="checkbox"><span><b>Emergency service</b><small>Mark this request as urgent for priority attention.</small></span></label>
+          </section>
+
+          <section class="wizard-step" data-step="2">
+            <span class="step-label">Step 2 of 4</span><h2>Choose your schedule</h2><p class="step-copy">Select a date and an available time slot.</p>
+            <div class="form-group"><label for="bookingDate">Service date</label><input id="bookingDate" name="bookingDate" type="date" required></div>
+            <div class="slot-heading"><strong>Available time slots</strong><small id="slotHint">Select a date first</small></div>
+            <div class="time-slot-grid" id="timeSlots"></div>
+          </section>
+
+          <section class="wizard-step" data-step="3">
+            <span class="step-label">Step 3 of 4</span><h2>Where should we come?</h2><p class="step-copy">Provide a complete address so the professional can find you easily.</p>
+            <div class="address-shortcuts"><button type="button" data-address-label="Home">⌂ Home</button><button type="button" data-address-label="Work">▣ Work</button><button type="button" data-address-label="Other">⌖ Other</button></div>
+            <div class="form-group"><label for="address">Complete service address</label><textarea id="address" name="address" autocomplete="street-address" rows="5" maxlength="300" placeholder="House / flat number, street, area, city and pincode" required></textarea><small class="address-autofill-note" id="addressAutofillNote">Use current location to fill the nearby address automatically. If lookup is unavailable, GPS coordinates will still be saved and you can continue.</small><small class="field-help"><span id="addressCount">0</span>/300 characters</small></div>
+            <div class="location-capture-card">
+              <div><strong>Share customer location</strong><p>Helps the assigned worker navigate directly to your service address.</p></div>
+              <button type="button" id="captureLocationBtn">⌖ Use current location</button>
+              <span id="locationStatus">Location not added</span>
+            </div>
+            <div class="form-group"><label for="notes">Instructions for the professional <span class="optional">Optional</span></label><textarea id="notes" rows="3" maxlength="200" placeholder="Example: Call before arrival, parking instructions, issue details"></textarea></div>
+          </section>
+
+          <section class="wizard-step" data-step="4">
+            <span class="step-label">Step 4 of 4</span><h2>Review and confirm</h2><p class="step-copy">Check every detail before placing the booking.</p>
+            <div class="review-grid" id="reviewDetails"></div>
+            <label class="terms-option"><input id="termsAccepted" type="checkbox"><span>I confirm that the booking information is correct.</span></label>
+          </section>
+
+          <div class="wizard-actions"><button type="button" class="btn btn-secondary wizard-back" id="backBtn" hidden>Back</button><button type="button" class="btn btn-primary wizard-next" id="nextBtn">Continue →</button><button type="submit" class="btn btn-primary wizard-confirm" id="confirmBtn" hidden>Confirm booking</button></div>
+        </form>
+
+        <aside class="booking-summary-card">
+          <div class="summary-header"><span>Booking summary</span><b id="summaryStatus">Draft</b></div>
+          <div class="summary-service"><div id="summaryIcon">🏠</div><span><small>Selected service</small><strong id="summaryService">Loading…</strong></span></div>
+          <dl class="summary-details"><div><dt>Date</dt><dd id="summaryDate">Not selected</dd></div><div><dt>Time</dt><dd id="summaryTime">Not selected</dd></div><div><dt>Location</dt><dd id="summaryAddress">Not added</dd></div></dl>
+          <div class="coupon-box"><label for="couponCode">Have a coupon?</label><div><input id="couponCode" maxlength="24" placeholder="Enter code"><button type="button" id="applyCouponBtn">Apply</button></div><small id="couponMessage"></small></div><div class="price-lines"><div><span>Service charge</span><strong id="basePrice">₹0</strong></div><div><span>Visit charge</span><strong id="visitCharge">₹49</strong></div><div><span>Taxes (18%)</span><strong id="taxAmount">₹0</strong></div><div class="emergency-price" id="emergencyPriceRow" hidden><span>Emergency priority</span><strong id="emergencyCharge">₹0</strong></div></div>
+          <div class="discount-price" id="discountPriceRow" hidden><span>Coupon discount</span><strong id="discountAmount">−₹0</strong></div><div class="summary-total"><span>Total payable</span><strong id="totalPrice">₹0</strong></div>
+          <p>Payment is collected after service completion. No online payment is required now.</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <div class="booking-success-modal" id="successModal" hidden><div class="success-card"><div class="success-check">✓</div><span>Booking confirmed</span><h2>Your expert request is placed!</h2><p>We will notify you when a provider accepts the booking.</p><div class="success-code"><small>Booking reference</small><strong id="successBookingCode">—</strong></div><a class="btn btn-primary" href="my-bookings.html">View my bookings</a></div></div>
+
+  <footer class="footer dashboard-footer">© 2026 HomeServe</footer>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script><script src="js/runtime-v80.js?v=8000"></script><script src="js/socket.js"></script><script src="js/booking-v72.js?v=7201"></script><script src="js/sidebar.js"></script><script src="js/ui-effects.js"></script>
+<div class="build-badge">Stable 8.0</div></body></html>

@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin Control Center | HomeServe</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="admin-body">
+  <aside class="admin-sidebar">
+    <a class="admin-logo" href="admin.html"><span class="brand-mark">H</span><span><strong>HomeServe</strong><small>Admin control center</small></span></a>
+    <nav class="admin-nav">
+      <button class="admin-nav-link active" data-section="overview">◫ <span>Overview</span></button>
+      <button class="admin-nav-link" data-section="bookings">▣ <span>Bookings</span><b id="pendingBadge">0</b></button>
+      <button class="admin-nav-link" data-section="analytics">◒ <span>Analytics</span></button>
+      <button class="admin-nav-link" data-section="users">◎ <span>Users & workers</span></button>
+      <button class="admin-nav-link" data-section="verification">✓ <span>Worker verification</span><b id="verificationBadge">0</b></button>
+      <button class="admin-nav-link" data-section="payments">▦ <span>Payment QR</span></button>
+      <button class="admin-nav-link" data-section="coupons">％ <span>Coupons</span></button>
+      <button class="admin-nav-link" data-section="system">⚙ <span>System status</span></button>
+      <a class="admin-nav-link" href="admin-services.html">◇ <span>Services</span></a>
+      <a class="admin-nav-link" href="index.html">⌂ <span>View website</span></a>
+    </nav>
+    <div class="admin-sidebar-footer">
+      <div class="admin-profile"><div class="admin-avatar">A</div><div><strong id="sidebarAdminName">Administrator</strong><small>Full access</small></div></div>
+      <button class="admin-logout" id="logoutBtn">Log out</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-topbar">
+      <button class="admin-mobile-menu" id="adminMenuBtn">☰</button>
+      <div><p class="admin-kicker">Platform management</p><h1 id="adminName">Welcome back</h1></div>
+      <div class="admin-top-actions"><span class="live-indicator"><i></i> Live system</span><a class="btn btn-primary" href="admin-services.html">+ Add service</a><button class="admin-top-logout" id="logoutTopBtn" type="button">Log out</button></div>
+    </header>
+
+    <div id="adminAlert" class="admin-alert" hidden></div>
+
+    <section class="admin-section active" id="section-overview">
+      <div class="admin-hero">
+        <div><span>Command center</span><h2>Everything happening on HomeServe, at a glance.</h2><p>Track demand, monitor service delivery and manage the people powering your platform.</p></div>
+        <div class="hero-orb"><strong id="completionRate">0%</strong><small>Completion rate</small></div>
+      </div>
+
+      <div class="admin-metrics">
+        <article class="metric-card"><div class="metric-icon">👥</div><div><small>Customers</small><strong id="customers">0</strong><span>Registered users</span></div></article>
+        <article class="metric-card"><div class="metric-icon">🧰</div><div><small>Providers</small><strong id="providers">0</strong><span>Service professionals</span></div></article>
+        <article class="metric-card"><div class="metric-icon">📦</div><div><small>Total bookings</small><strong id="bookings">0</strong><span>All-time requests</span></div></article>
+        <article class="metric-card featured"><div class="metric-icon">₹</div><div><small>Completed revenue</small><strong id="revenue">₹0</strong><span>Based on service prices</span></div></article>
+      </div>
+
+      <div class="admin-grid-2">
+        <section class="admin-card">
+          <div class="admin-card-head"><div><small>Booking pipeline</small><h3>Status overview</h3></div><button class="text-button" data-go="bookings">Manage bookings →</button></div>
+          <div class="status-list">
+            <div><span><i class="dot pending"></i>Pending</span><strong id="pending">0</strong></div>
+            <div><span><i class="dot accepted"></i>Accepted</span><strong id="accepted">0</strong></div>
+            <div><span><i class="dot way"></i>On the way</span><strong id="onTheWay">0</strong></div>
+            <div><span><i class="dot completed"></i>Completed</span><strong id="completed">0</strong></div>
+            <div><span><i class="dot cancelled"></i>Cancelled</span><strong id="cancelled">0</strong></div>
+          </div>
+        </section>
+        <section class="admin-card">
+          <div class="admin-card-head"><div><small>Customer demand</small><h3>Most booked services</h3></div></div>
+          <div id="popularServices" class="popularity-list"><p class="empty-state">Loading analytics...</p></div>
+        </section>
+      </div>
+
+      <section class="admin-card admin-table-card">
+        <div class="admin-card-head"><div><small>Latest activity</small><h3>Recent bookings</h3></div><button class="text-button" data-go="bookings">View all →</button></div>
+        <div class="table-wrap"><table class="admin-table"><thead><tr><th>Booking</th><th>Customer</th><th>Service</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead><tbody id="recentBookingsBody"></tbody></table></div>
+      </section>
+    </section>
+
+
+    <section class="admin-section" id="section-analytics">
+      <div class="section-title-row"><div><p class="admin-kicker">Business intelligence</p><h2>Platform analytics</h2><p>Revenue, growth, payment and worker-performance insights from live booking data.</p></div><div class="analytics-actions"><button class="btn btn-primary" id="refreshAnalytics" type="button">Refresh analytics</button><button class="btn btn-secondary" id="exportAnalytics" type="button">Export CSV</button></div></div>
+      <div class="admin-metrics analytics-summary">
+        <article class="metric-card featured"><div class="metric-icon">₹</div><div><small>Verified revenue</small><strong id="analyticsPaidRevenue">₹0</strong><span id="analyticsPaidBookings">0 paid bookings</span></div></article>
+        <article class="metric-card"><div class="metric-icon">↗</div><div><small>Latest month revenue</small><strong id="analyticsMonthRevenue">₹0</strong><span id="analyticsMonthBookings">0 completed jobs</span></div></article>
+        <article class="metric-card"><div class="metric-icon">+</div><div><small>New customers</small><strong id="analyticsNewCustomers">0</strong><span>Latest calendar month</span></div></article>
+        <article class="metric-card"><div class="metric-icon">★</div><div><small>Top worker</small><strong id="analyticsTopWorker">—</strong><span id="analyticsTopWorkerJobs">No completed jobs yet</span></div></article>
+      </div>
+      <div class="analytics-grid">
+        <section class="admin-card analytics-card"><div class="admin-card-head"><div><small>Six-month trend</small><h3>Completed revenue</h3></div></div><canvas id="revenueChart" height="240" aria-label="Monthly completed revenue chart"></canvas></section>
+        <section class="admin-card analytics-card"><div class="admin-card-head"><div><small>Demand lifecycle</small><h3>Booking status distribution</h3></div></div><canvas id="statusChart" height="240" aria-label="Booking status distribution chart"></canvas></section>
+        <section class="admin-card analytics-card"><div class="admin-card-head"><div><small>Customer acquisition</small><h3>New customers</h3></div></div><canvas id="customerChart" height="240" aria-label="Monthly new customer chart"></canvas></section>
+        <section class="admin-card analytics-card"><div class="admin-card-head"><div><small>Collection methods</small><h3>Payment operations</h3></div></div><div id="paymentAnalytics" class="analytics-payment-list"><p class="empty-state">Loading payment analytics…</p></div></section>
+      </div>
+      <section class="admin-card admin-table-card"><div class="admin-card-head"><div><small>Team quality</small><h3>Worker performance leaderboard</h3></div></div><div class="table-wrap"><table class="admin-table"><thead><tr><th>Rank</th><th>Worker</th><th>Total jobs</th><th>Completed</th><th>Completion rate</th><th>Completed value</th></tr></thead><tbody id="workerLeaderboard"><tr><td colspan="6" class="empty-cell">Loading worker performance…</td></tr></tbody></table></div></section>
+    </section>
+
+    <section class="admin-section" id="section-bookings">
+      <div class="section-title-row"><div><p class="admin-kicker">Operations</p><h2>Booking management</h2><p>Search, filter and update every service request.</p></div></div>
+      <div class="admin-toolbar"><input id="bookingSearch" placeholder="Search customer, service or booking ID"><select id="bookingStatusFilter"><option value="">All statuses</option><option>Pending</option><option>Accepted</option><option>On the Way</option><option>Completed</option><option>Cancelled</option></select></div>
+      <section class="admin-card admin-table-card"><div class="table-wrap"><table class="admin-table"><thead><tr><th>Booking</th><th>Customer</th><th>Service</th><th>Provider</th><th>Schedule</th><th>Status</th><th>Action</th></tr></thead><tbody id="bookingsBody"></tbody></table></div></section>
+    </section>
+
+    <section class="admin-section" id="section-users">
+      <div class="section-title-row"><div><p class="admin-kicker">Community</p><h2>User management</h2><p>Review customers and providers, control access and keep the platform safe.</p></div></div>
+      <div class="admin-toolbar"><input id="userSearch" placeholder="Search name, email or phone"><select id="userRoleFilter"><option value="">All roles</option><option value="customer">Customers</option><option value="provider">Providers</option></select><button class="btn btn-primary" type="button" id="openWorkerForm">+ Add worker</button></div>
+      <section class="admin-card worker-create-card" id="workerCreateCard" hidden>
+        <div class="admin-card-head"><div><small>Provider access</small><h3>Create worker login</h3></div><button class="text-button" type="button" id="closeWorkerForm">Close</button></div>
+        <form id="workerForm" class="worker-form-grid">
+          <label>Full name<input id="workerName" required placeholder="Worker full name"></label>
+          <label>Email<input id="workerEmail" type="email" required placeholder="worker@example.com"></label>
+          <label>Phone<input id="workerPhone" required placeholder="+919876543210"></label>
+          <label>Temporary password<input id="workerPassword" type="password" minlength="8" required placeholder="Minimum 8 characters"></label>
+          <label>Skills<input id="workerSkills" placeholder="Plumbing, Electrical"></label>
+          <label>Experience (years)<input id="workerExperience" type="number" min="0" max="60" value="0"></label>
+          <button class="btn btn-primary" type="submit">Create provider login</button>
+        </form>
+      </section>
+      <section class="admin-card admin-table-card"><div class="table-wrap"><table class="admin-table"><thead><tr><th>User</th><th>Contact</th><th>Role</th><th>Joined</th><th>Access</th><th>Actions</th></tr></thead><tbody id="usersBody"></tbody></table></div></section>
+    </section>
+
+
+    <section class="admin-section" id="section-verification">
+      <div class="section-title-row"><div><p class="admin-kicker">Trust & safety</p><h2>Worker verification</h2><p>Review identity details, certifications and background-check status before workers receive jobs.</p></div><button class="btn btn-primary" id="refreshVerification" type="button">Refresh</button></div>
+      <div class="verification-summary"><article><small>Pending review</small><strong id="verificationPending">0</strong></article><article><small>Verified workers</small><strong id="verificationVerified">0</strong></article><article><small>Background cleared</small><strong id="verificationCleared">0</strong></article></div>
+      <section class="admin-card admin-table-card"><div class="table-wrap"><table class="admin-table"><thead><tr><th>Worker</th><th>Identity</th><th>Certifications</th><th>Background</th><th>Verification</th><th>Action</th></tr></thead><tbody id="verificationBody"><tr><td colspan="6" class="empty-cell">Loading worker verification…</td></tr></tbody></table></div></section>
+    </section>
+
+    <section class="admin-section" id="section-payments">
+      <div class="section-title-row"><div><p class="admin-kicker">Payment control</p><h2>UPI QR administration</h2><p>Enable or disable provider QR collection and control the UPI account used across all workers.</p></div></div>
+      <div class="admin-payment-grid">
+        <section class="admin-card">
+          <form id="paymentSettingsForm" class="payment-setting-form">
+            <label class="payment-toggle-row"><span><strong>Enable QR payments</strong><small>Providers will see QR only when this is enabled.</small></span><input id="paymentQrEnabled" type="checkbox"></label>
+            <label class="payment-toggle-row"><span><strong>Enable cash on delivery</strong><small>Workers can record cash only after job completion.</small></span><input id="cashOnDeliveryEnabled" type="checkbox"></label>
+            <label class="payment-toggle-row"><span><strong>Allow workers to accept unassigned jobs</strong><small>Keep disabled when admin assignment is mandatory.</small></span><input id="allowProviderSelfAccept" type="checkbox"></label>
+            <label>UPI ID<input id="paymentUpiId" placeholder="homeserve@upi" autocomplete="off"><small>Used to generate a dynamic QR when no image is uploaded.</small></label>
+            <label>Upload payment QR image<input id="paymentQrImage" type="file" accept="image/png,image/jpeg,image/webp"><small>Admin can replace the QR with a PNG, JPG or WebP image.</small></label>
+            <button class="btn btn-secondary" id="removePaymentQrImage" type="button">Remove uploaded QR</button>
+            <label>Payee name<input id="paymentPayeeName" placeholder="HomeServe"></label>
+            <label>QR amount mode<select id="qrAmountMode"><option value="booking">Use booking total</option><option value="fixed">Use fixed admin amount</option></select></label>
+            <label>Fixed QR amount (₹)<input id="fixedQrAmount" type="number" min="1" value="1"></label>
+            <label>Payment note<input id="paymentNote" maxlength="120" placeholder="Home service payment"></label>
+            <button class="btn btn-primary" type="submit">Save QR controls</button>
+          </form>
+        </section>
+        <section class="admin-card"><div class="admin-card-head"><div><small>Live preview</small><h3>Provider payment QR</h3></div></div><div class="qr-preview-box"><div id="adminQrPreview"></div><p id="adminQrPreviewText">Enter a UPI ID to preview the QR.</p></div></section>
+      </div>
+      <section class="admin-card admin-table-card payment-review-card">
+        <div class="admin-card-head"><div><small>Payment operations</small><h3>Pending verification and collections</h3></div><button class="text-button" type="button" id="refreshPayments">Refresh</button></div>
+        <div class="table-wrap"><table class="admin-table"><thead><tr><th>Booking</th><th>Customer</th><th>Method</th><th>Amount</th><th>Reference</th><th>Status</th><th>Action</th></tr></thead><tbody id="paymentsReviewBody"><tr><td colspan="7" class="empty-cell">Loading payment activity…</td></tr></tbody></table></div>
+      </section>
+    </section>
+
+
+    <section class="admin-section" id="section-coupons">
+      <div class="section-title-row"><div><p class="admin-kicker">Offers</p><h2>Coupon management</h2><p>Create flat or percentage discounts and control validity, limits and minimum order value.</p></div></div>
+      <div class="admin-two-column">
+        <section class="admin-card"><div class="admin-card-head"><div><small>New campaign</small><h3>Create coupon</h3></div></div>
+          <form id="couponForm" class="admin-form-grid">
+            <label>Coupon code<input id="couponAdminCode" maxlength="24" required placeholder="WELCOME20"></label>
+            <label>Description<input id="couponDescription" maxlength="160" placeholder="First booking offer"></label>
+            <label>Discount type<select id="couponType"><option value="percentage">Percentage</option><option value="flat">Flat amount</option></select></label>
+            <label>Discount value<input id="couponValue" type="number" min="1" required></label>
+            <label>Minimum amount<input id="couponMinimum" type="number" min="0" value="0"></label>
+            <label>Maximum discount<input id="couponMaximum" type="number" min="0" value="0"><small>Use 0 for no cap.</small></label>
+            <label>Usage limit<input id="couponLimit" type="number" min="0" value="0"><small>Use 0 for unlimited.</small></label>
+            <label>Expiry date<input id="couponExpiry" type="date" required></label>
+            <button class="btn btn-primary" type="submit">Create coupon</button>
+          </form>
+        </section>
+        <section class="admin-card coupon-guide-card"><div class="admin-card-head"><div><small>Usage guide</small><h3>How coupons work</h3></div></div><div class="coupon-guide-grid"><article><span>％</span><div><strong>Percentage discount</strong><small>Example: 20% off the booking total.</small></div></article><article><span>₹</span><div><strong>Flat discount</strong><small>Example: ₹100 deducted from the total.</small></div></article><article><span>✓</span><div><strong>Secure validation</strong><small>Every coupon is checked again during booking.</small></div></article><article><span>↻</span><div><strong>Usage tracking</strong><small>Usage increases only after a booking is created.</small></div></article></div></section>
+      </div>
+      <section class="admin-card admin-table-card"><div class="admin-card-head"><div><small>Active and past campaigns</small><h3>All coupons</h3></div><button class="text-button" id="refreshCoupons" type="button">Refresh</button></div><div class="table-wrap"><table class="admin-table"><thead><tr><th>Code</th><th>Discount</th><th>Minimum</th><th>Usage</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead><tbody id="couponsBody"><tr><td colspan="7" class="empty-cell">Loading coupons…</td></tr></tbody></table></div></section>
+    </section>
+
+    <section class="admin-section" id="section-system">
+      <div class="section-title-row"><div><p class="admin-kicker">Diagnostics</p><h2>System status</h2><p>Verify backend, database, real-time services and payment configuration before a demonstration.</p></div><button class="btn btn-primary" id="refreshSystemHealth" type="button">Refresh status</button></div>
+      <div class="admin-metrics system-metrics">
+        <article class="metric-card"><div class="metric-icon">API</div><div><small>Backend API</small><strong id="healthApi">Checking</strong><span id="healthUptime">Waiting for response</span></div></article>
+        <article class="metric-card"><div class="metric-icon">DB</div><div><small>MongoDB</small><strong id="healthDatabase">Checking</strong><span>Connection state</span></div></article>
+        <article class="metric-card"><div class="metric-icon">↯</div><div><small>Socket.IO</small><strong id="healthSocket">Checking</strong><span>Real-time updates</span></div></article>
+        <article class="metric-card featured"><div class="metric-icon">₹</div><div><small>Payments</small><strong id="healthPayments">Checking</strong><span id="healthPaymentDetail">Configuration state</span></div></article>
+      </div>
+      <section class="admin-card">
+        <div class="admin-card-head"><div><small>Deployment checklist</small><h3>Operational readiness</h3></div><span id="healthCheckedAt">Not checked</span></div>
+        <div class="status-list" id="readinessList"><div><span>Loading checks…</span><strong>—</strong></div></div>
+      </section>
+    </section>
+
+  </main>
+  <div class="admin-mobile-overlay" id="adminOverlay"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="js/runtime-v80.js?v=8000"></script><script src="js/admin-v70.js?v=7001"></script>
+  <script src="js/coupons-admin-v72.js?v=7201"></script>
+<script src="js/ui-effects.js"></script><div class="build-badge">Stable 8.0</div>  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="js/notifications-v62.js"></script>
+  <script src="js/worker-verification-v74.js"></script>
+  <link rel="stylesheet" href="css/worker-verification-v74.css">
+</body>
+</html>
