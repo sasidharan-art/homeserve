@@ -51,6 +51,33 @@ function normalizePhone(phone = "") {
     return hasLeadingPlus ? `+${digits}` : digits;
 }
 
+function phoneCandidates(phone = "") {
+    const normalized = normalizePhone(phone);
+    const digits = normalized.replace(/\D/g, "");
+    const candidates = new Set([String(phone).trim(), normalized, digits]);
+
+    // Match an Indian number whether it was saved as 10 digits or +91XXXXXXXXXX.
+    if (digits.length === 10) {
+        candidates.add(`+91${digits}`);
+        candidates.add(`91${digits}`);
+    } else if (digits.length === 12 && digits.startsWith("91")) {
+        candidates.add(digits.slice(2));
+        candidates.add(`+${digits}`);
+    }
+
+    return [...candidates].filter(Boolean);
+}
+
+function toSmsPhone(phone = "") {
+    const digits = String(phone).replace(/\D/g, "");
+    if (digits.length === 10) return `+91${digits}`;
+    if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
+    if (String(phone).trim().startsWith("+") && digits.length >= 10 && digits.length <= 15) {
+        return `+${digits}`;
+    }
+    return "";
+}
+
 function isEmail(value = "") {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
 }
@@ -64,12 +91,7 @@ async function findUserByIdentifier(identifier, includeResetFields = false) {
 
     const query = isEmail(raw)
         ? { email: normalizeEmail(raw) }
-        : {
-            $or: [
-                { phone: normalizePhone(raw) },
-                { phone: raw }
-            ]
-        };
+        : { phone: { $in: phoneCandidates(raw) } };
 
     let userQuery = User.findOne(query);
 
@@ -225,11 +247,16 @@ router.post("/forgot-password/request-otp", otpRequestLimiter, async (req, res) 
             });
         }
 
-        if (channel === "sms" && !user.phone.startsWith("+")) {
-            return res.status(400).json({
-                success: false,
-                message: "SMS OTP requires the saved phone number to include a country code, for example +919876543210"
-            });
+        let deliveryUser = user;
+        if (channel === "sms") {
+            const smsPhone = toSmsPhone(user.phone);
+            if (!smsPhone) {
+                return res.status(400).json({
+                    success: false,
+                    message: "The saved phone number is invalid. Update it to a valid 10-digit Indian mobile number."
+                });
+            }
+            deliveryUser = { name: user.name, email: user.email, phone: smsPhone };
         }
 
         const otp = generateOtp();
@@ -245,7 +272,7 @@ router.post("/forgot-password/request-otp", otpRequestLimiter, async (req, res) 
         // Development mode must work without SMTP or Twilio credentials.
         // In production, OTP delivery is required before the reset state is saved.
         if (!devMode) {
-            await deliverOtp(user, channel, otp);
+            await deliverOtp(deliveryUser, channel, otp);
         }
 
         await user.save();

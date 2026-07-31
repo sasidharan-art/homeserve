@@ -1,4 +1,11 @@
-const API_URL = `${window.location.origin}/api/auth`;
+const API_ORIGIN = (() => {
+    const runtimeOrigin = window.HOMESERVE?.ORIGIN;
+    if (runtimeOrigin) return runtimeOrigin;
+
+    const isLiveServer = ["5500", "8080"].includes(window.location.port);
+    return isLiveServer ? "http://127.0.0.1:5000" : window.location.origin;
+})();
+const API_URL = `${API_ORIGIN}/api/auth`;
 
 const requestOtpForm = document.getElementById("requestOtpForm");
 const verifyOtpForm = document.getElementById("verifyOtpForm");
@@ -76,8 +83,20 @@ function setButtonLoading(button, loading, normalText) {
         : normalText;
 }
 
-function normalizeIdentifier(value) {
-    return String(value || "").trim();
+function normalizeIdentifier(value, channel = currentChannel) {
+    const raw = String(value || "").trim();
+    if (!raw || raw.includes("@")) return raw.toLowerCase();
+
+    const digits = raw.replace(/\D/g, "");
+
+    // Accept ordinary 10-digit Indian numbers and convert them to E.164 for SMS.
+    if (channel === "sms") {
+        if (digits.length === 10) return `+91${digits}`;
+        if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
+        if (raw.startsWith("+") && digits.length >= 10 && digits.length <= 15) return `+${digits}`;
+    }
+
+    return raw;
 }
 
 function isValidIdentifier(value) {
@@ -127,7 +146,7 @@ async function readJson(response) {
 
 async function sendOtp({ isResend = false } = {}) {
     clearMessage();
-    const enteredIdentifier = normalizeIdentifier(identifierInput.value);
+    const enteredIdentifier = normalizeIdentifier(identifierInput.value, otpChannelInput.value);
     currentIdentifier = enteredIdentifier || currentIdentifier;
     currentChannel = otpChannelInput.value || currentChannel;
 
