@@ -40,8 +40,22 @@
         <p>Trusted professionals for repairs, cleaning and home improvements—booked in just a few clicks.</p>
         <div class="hero-search"><span>⌕</span><input id="heroSearch" type="search" placeholder="What service do you need today?"><button id="heroSearchBtn">Search</button></div>
         <div class="hero-actions"><a class="btn btn-light" href="#servicesSection">Book a service</a><a class="hero-text-link" href="my-bookings.html">Track a booking →</a></div>
-        <div class="hero-rating"><span class="avatar-stack"><i>J</i><i>P</i><i>R</i></span><div><b>4.9/5 customer rating</b><small>Trusted by happy households</small></div></div>
-      </div>
+        <div class="hero-rating">
+    <span
+        class="avatar-stack"
+        id="reviewAvatarStack"
+    ></span>
+
+    <div>
+        <b id="dashboardAverageRating">
+            No customer ratings yet
+        </b>
+
+        <small id="dashboardReviewCount">
+            Reviews from completed bookings
+        </small>
+    </div>
+</div>
       <div class="customer-hero-art" aria-hidden="true">
         <span class="floating-service service-float-one">⚡ Electrician</span><span class="floating-service service-float-two">❄️ AC Repair</span><span class="floating-service service-float-three">✨ Cleaning</span>
         <div class="hero-home-card"><div class="hero-technician">👨‍🔧</div><span class="home-roof"></span><div class="home-body"><span>✓</span></div><small>Home care made simple</small></div>
@@ -92,7 +106,26 @@
 
     <section class="why-section reveal-on-scroll"><div class="center-section-head"><span>Why HomeServe?</span><h2>Reliable help without the hassle</h2><p>Everything you need for a safer, simpler service experience.</p></div><div class="why-grid"><article><i>✓</i><h3>Verified professionals</h3><p>Service experts selected for skill, reliability and professionalism.</p></article><article><i>₹</i><h3>Clear pricing</h3><p>See the price breakdown before confirming your booking.</p></article><article><i>⚡</i><h3>Fast booking</h3><p>Choose a service, date and time in a guided booking flow.</p></article><article><i>🛡</i><h3>Customer support</h3><p>Get help with bookings and services whenever you need it.</p></article></div></section>
 
-    <section class="testimonial-section reveal-on-scroll"><div class="center-section-head"><span>Customer stories</span><h2>People love the convenience</h2></div><div class="testimonial-track"><article><div>★★★★★</div><p>“The electrician arrived on time and completed the work neatly. Booking was extremely easy.”</p><footer><b>Rahul K.</b><span>Electrical service</span></footer></article><article><div>★★★★★</div><p>“A clean, transparent experience from selection to confirmation. The pricing summary was helpful.”</p><footer><b>Priya S.</b><span>Home cleaning</span></footer></article><article><div>★★★★★</div><p>“I found an AC service and selected my time slot in minutes. Very convenient for busy users.”</p><footer><b>Arun M.</b><span>AC repair</span></footer></article></div></section>
+    <section class="testimonial-section reveal-on-scroll">
+    <div class="center-section-head">
+        <span>Customer stories</span>
+
+        <h2>
+            Reviews from real HomeServe customers
+        </h2>
+    </div>
+
+    <div
+        class="testimonial-track"
+        id="customerTestimonials"
+    >
+        <article>
+            <p>
+                No customer reviews yet.
+            </p>
+        </article>
+    </div>
+</section>
 
     <section class="dashboard-cta reveal-on-scroll"><div><span>Need help at home?</span><h2>Book a trusted professional today.</h2><p>Choose from repair, cleaning and maintenance services.</p></div><a class="btn btn-light" href="#servicesSection">Explore services →</a></section>
   </main>

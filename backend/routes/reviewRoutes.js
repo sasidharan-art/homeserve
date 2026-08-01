@@ -48,4 +48,40 @@ router.get('/provider-summary', auth, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
+router.get("/public", async (req, res) => {
+    try {
+        const reviews = await Review.find({
+            status: "Published"
+        })
+            .populate("customer", "name")
+            .populate("service", "name")
+            .sort({ createdAt: -1 })
+            .limit(20)
+            .lean();
+
+        const count = reviews.length;
+
+        const average = count
+            ? reviews.reduce(
+                (sum, review) =>
+                    sum + Number(review.rating || 0),
+                0
+            ) / count
+            : 0;
+
+        return res.json({
+            success: true,
+            average: Number(average.toFixed(1)),
+            count,
+            reviews
+        });
+    } catch (err) {
+        console.error("Unable to load public reviews:", err);
+
+        return res.status(500).json({
+            success: false,
+            message: "Unable to load customer reviews"
+        });
+    }
+});
 module.exports = router;

@@ -1208,6 +1208,209 @@ document
 // ===================================
 // Initial loading
 // ===================================
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
 
+function renderStars(rating) {
+    const safeRating = Math.max(
+        0,
+        Math.min(5, Number(rating) || 0)
+    );
+
+    return `${"★".repeat(safeRating)}${"☆".repeat(
+        5 - safeRating
+    )}`;
+}
+
+async function loadCustomerReviews() {
+    const averageElement =
+        document.getElementById(
+            "dashboardAverageRating"
+        );
+
+    const countElement =
+        document.getElementById(
+            "dashboardReviewCount"
+        );
+
+    const avatarStack =
+        document.getElementById(
+            "reviewAvatarStack"
+        );
+
+    const testimonialContainer =
+        document.getElementById(
+            "customerTestimonials"
+        );
+
+    try {
+        const response = await fetch(
+            `${API}/reviews/public`,
+            {
+                headers: {
+                    Accept: "application/json"
+                },
+                cache: "no-store"
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || data.success === false) {
+            throw new Error(
+                data.message ||
+                "Unable to load customer reviews"
+            );
+        }
+
+        const reviews = Array.isArray(data.reviews)
+            ? data.reviews
+            : [];
+
+        if (averageElement) {
+            averageElement.textContent =
+                data.count > 0
+                    ? `${Number(data.average).toFixed(
+                        1
+                    )}/5 customer rating`
+                    : "No customer ratings yet";
+        }
+
+        if (countElement) {
+            countElement.textContent =
+                data.count > 0
+                    ? `${data.count} verified customer review${
+                        data.count === 1 ? "" : "s"
+                    }`
+                    : "Reviews from completed bookings";
+        }
+
+        if (avatarStack) {
+            avatarStack.innerHTML = reviews
+                .slice(0, 3)
+                .map((review) => {
+                    const name =
+                        review.customer?.name ||
+                        "Customer";
+
+                    return `
+                        <i>
+                            ${escapeHtml(
+                                name
+                                    .charAt(0)
+                                    .toUpperCase()
+                            )}
+                        </i>
+                    `;
+                })
+                .join("");
+        }
+
+        if (!testimonialContainer) {
+            return;
+        }
+
+        if (!reviews.length) {
+            testimonialContainer.innerHTML = `
+                <article>
+                    <div>☆☆☆☆☆</div>
+
+                    <p>
+                        No customer reviews yet.
+                    </p>
+
+                    <footer>
+                        <b>HomeServe</b>
+                        <span>
+                            Reviews will appear after completed bookings.
+                        </span>
+                    </footer>
+                </article>
+            `;
+
+            return;
+        }
+
+        testimonialContainer.innerHTML = reviews
+            .slice(0, 6)
+            .map((review) => {
+                const customerName =
+                    review.customer?.name ||
+                    "Customer";
+
+                const serviceName =
+                    review.service?.name ||
+                    "Home service";
+
+                const comment =
+                    review.comment ||
+                    "Customer submitted a rating.";
+
+                return `
+                    <article>
+                        <div>
+                            ${renderStars(
+                                review.rating
+                            )}
+                        </div>
+
+                        <p>
+                            “${escapeHtml(comment)}”
+                        </p>
+
+                        <footer>
+                            <b>
+                                ${escapeHtml(customerName)}
+                            </b>
+
+                            <span>
+                                ${escapeHtml(serviceName)}
+                            </span>
+                        </footer>
+                    </article>
+                `;
+            })
+            .join("");
+    } catch (error) {
+        console.error(
+            "Unable to load customer reviews:",
+            error
+        );
+
+        if (averageElement) {
+            averageElement.textContent =
+                "No customer ratings yet";
+        }
+
+        if (countElement) {
+            countElement.textContent =
+                "Reviews from completed bookings";
+        }
+
+        if (testimonialContainer) {
+            testimonialContainer.innerHTML = `
+                <article>
+                    <p>
+                        Customer reviews could not be loaded.
+                    </p>
+                </article>
+            `;
+        }
+    }
+}
 loadServices();
 loadBookingOverview();
+loadCustomerReviews();
+
+if (window.socket) {
+    window.socket.on(
+        "review-updated",
+        loadCustomerReviews
+    );
+}
