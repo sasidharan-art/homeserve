@@ -1,5 +1,4 @@
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
 const twilio = require("twilio");
 
 // ===================================
@@ -33,7 +32,6 @@ function safeHashCompare(plainValue, storedHash) {
     }
 
     const suppliedHash = hashValue(plainValue);
-
     const suppliedBuffer = Buffer.from(suppliedHash, "hex");
     const storedBuffer = Buffer.from(storedHash, "hex");
 
@@ -44,200 +42,156 @@ function safeHashCompare(plainValue, storedHash) {
 }
 
 // ===================================
-// Nodemailer transporter
-// ===================================
-
-function createEmailTransporter() {
-    const emailUser =
-        process.env.EMAIL_USER ||
-        process.env.SMTP_USER;
-
-    const emailPass =
-        process.env.EMAIL_PASS ||
-        process.env.SMTP_PASS;
-
-    if (!emailUser || !emailPass) {
-        throw new Error(
-            "EMAIL_USER and EMAIL_PASS are required"
-        );
-    }
-
-    const host =
-        process.env.EMAIL_HOST ||
-        process.env.SMTP_HOST ||
-        "smtp.gmail.com";
-
-    const port = Number(
-        process.env.EMAIL_PORT ||
-        process.env.SMTP_PORT ||
-        465
-    );
-
-    const secureValue =
-        process.env.EMAIL_SECURE ??
-        process.env.SMTP_SECURE;
-
-    const secure =
-        secureValue !== undefined
-            ? String(secureValue).toLowerCase() === "true"
-            : port === 465;
-
-    console.log("SMTP configuration:", {
-        host,
-        port,
-        secure,
-        user: emailUser,
-        from:
-            process.env.EMAIL_FROM ||
-            emailUser
-    });
-
-    return nodemailer.createTransport({
-        host,
-        port,
-        secure,
-
-        auth: {
-            user: emailUser,
-            pass: emailPass
-        },
-
-        connectionTimeout: 30000,
-        greetingTimeout: 30000,
-        socketTimeout: 45000,
-
-        tls: {
-            rejectUnauthorized: true
-        }
-    });
-}
-
-// ===================================
-// Email OTP
+// Brevo Email API
 // ===================================
 
 async function sendEmailOtp(user, otp) {
+    const apiKey = process.env.BREVO_API_KEY;
+    const senderEmail = process.env.EMAIL_FROM;
+    const senderName = process.env.EMAIL_FROM_NAME || "HomeServe";
+
+    if (!apiKey) {
+        throw new Error("BREVO_API_KEY is not configured");
+    }
+
+    if (!senderEmail) {
+        throw new Error("EMAIL_FROM is not configured");
+    }
+
     if (!user?.email) {
         throw new Error(
             "The user does not have a registered email address"
         );
     }
 
-    const transporter = createEmailTransporter();
+    const emailPayload = {
+        sender: {
+            name: senderName,
+            email: senderEmail
+        },
+        to: [
+            {
+                email: user.email,
+                name: user.name || "HomeServe User"
+            }
+        ],
+        subject: "HomeServe password reset OTP",
+        textContent:
+            `Hello ${user.name || "User"},\n\n` +
+            `Your HomeServe password reset OTP is ${otp}.\n` +
+            "This OTP expires in 10 minutes.\n\n" +
+            "Do not share this OTP with anyone.",
+        htmlContent: `
+            <div
+                style="
+                    font-family: Arial, sans-serif;
+                    max-width: 520px;
+                    margin: 20px auto;
+                    padding: 24px;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 12px;
+                    background: #ffffff;
+                "
+            >
+                <h2 style="margin-top: 0; color: #172033;">
+                    HomeServe password reset
+                </h2>
 
-    const senderEmail =
-        process.env.EMAIL_FROM ||
-        process.env.EMAIL_USER ||
-        process.env.SMTP_USER;
+                <p>Hello ${escapeHtml(user.name || "User")},</p>
 
-    try {
-        console.log(
-            `Verifying SMTP connection for ${senderEmail}...`
-        );
+                <p>
+                    Use the following one-time password to reset
+                    your HomeServe account password:
+                </p>
 
-        await transporter.verify();
-
-        console.log("SMTP verification successful");
-    } catch (err) {
-        console.error("SMTP verification failed");
-
-        console.error({
-            name: err.name,
-            message: err.message,
-            code: err.code,
-            command: err.command,
-            response: err.response,
-            responseCode: err.responseCode,
-            stack: err.stack
-        });
-
-        throw err;
-    }
-
-    try {
-        const info = await transporter.sendMail({
-            from: `HomeServe <${senderEmail}>`,
-            to: user.email,
-            subject: "HomeServe password reset OTP",
-
-            text:
-                `Hello ${user.name || "User"},\n\n` +
-                `Your HomeServe password reset OTP is ${otp}.\n` +
-                "This OTP expires in 10 minutes.\n\n" +
-                "Do not share this OTP with anyone.",
-
-            html: `
                 <div
                     style="
-                        font-family: Arial, sans-serif;
-                        max-width: 520px;
-                        margin: auto;
-                        padding: 24px;
-                        border: 1px solid #e5e7eb;
-                        border-radius: 12px;
+                        margin: 24px 0;
+                        padding: 18px;
+                        border-radius: 10px;
+                        background: #f3f7ff;
+                        text-align: center;
                     "
                 >
-                    <h2 style="margin-top: 0;">
-                        HomeServe password reset
-                    </h2>
-
-                    <p>Hello ${user.name || "User"},</p>
-
-                    <p>
-                        Use the following one-time password
-                        to reset your account password:
-                    </p>
-
-                    <p
+                    <span
                         style="
                             font-size: 32px;
                             font-weight: 700;
                             letter-spacing: 8px;
-                            margin: 24px 0;
+                            color: #1769e0;
                         "
                     >
                         ${otp}
-                    </p>
-
-                    <p>
-                        This OTP expires in 10 minutes.
-                        Do not share it with anyone.
-                    </p>
+                    </span>
                 </div>
-            `
-        });
 
-        console.log(
-            `Email OTP sent successfully to ${user.email}`
-        );
+                <p>
+                    This OTP expires in 10 minutes.
+                    Do not share it with anyone.
+                </p>
 
-        console.log({
-            messageId: info.messageId,
-            accepted: info.accepted,
-            rejected: info.rejected,
-            response: info.response
-        });
-    } catch (err) {
-        console.error("Email sending failed");
+                <p style="color: #64748b; font-size: 13px;">
+                    If you did not request a password reset,
+                    you can ignore this email.
+                </p>
+            </div>
+        `,
+        tags: ["password-reset", "otp"]
+    };
 
-        console.error({
-            name: err.name,
-            message: err.message,
-            code: err.code,
-            command: err.command,
-            response: err.response,
-            responseCode: err.responseCode,
-            stack: err.stack
-        });
+    const response = await fetch(
+        "https://api.brevo.com/v3/smtp/email",
+        {
+            method: "POST",
+            headers: {
+                accept: "application/json",
+                "content-type": "application/json",
+                "api-key": apiKey
+            },
+            body: JSON.stringify(emailPayload),
+            signal: AbortSignal.timeout(30000)
+        }
+    );
 
-        throw err;
-    } finally {
-        transporter.close();
+    const responseText = await response.text();
+
+    let responseData = {};
+
+    if (responseText) {
+        try {
+            responseData = JSON.parse(responseText);
+        } catch {
+            responseData = {
+                rawResponse: responseText
+            };
+        }
     }
+
+    if (!response.ok) {
+        console.error("Brevo email API error:", {
+            status: response.status,
+            statusText: response.statusText,
+            response: responseData
+        });
+
+        const errorMessage =
+            responseData.message ||
+            responseData.code ||
+            `Brevo email API returned HTTP ${response.status}`;
+
+        throw new Error(errorMessage);
+    }
+
+    console.log(
+        `Email OTP sent successfully to ${user.email}`,
+        {
+            messageId: responseData.messageId
+        }
+    );
 }
 
 // ===================================
-// SMS OTP
+// SMS OTP using Twilio
 // ===================================
 
 async function sendSmsOtp(user, otp) {
@@ -268,37 +222,21 @@ async function sendSmsOtp(user, otp) {
         TWILIO_AUTH_TOKEN
     );
 
-    try {
-        const message = await client.messages.create({
-            body:
-                `Your HomeServe password reset OTP is ${otp}. ` +
-                "It expires in 10 minutes.",
-            from: TWILIO_PHONE_NUMBER,
-            to: user.phone
-        });
+    const message = await client.messages.create({
+        body:
+            `Your HomeServe password reset OTP is ${otp}. ` +
+            "It expires in 10 minutes.",
+        from: TWILIO_PHONE_NUMBER,
+        to: user.phone
+    });
 
-        console.log(
-            `SMS OTP sent successfully to ${user.phone}`
-        );
-
-        console.log({
+    console.log(
+        `SMS OTP sent successfully to ${user.phone}`,
+        {
             sid: message.sid,
             status: message.status
-        });
-    } catch (err) {
-        console.error("SMS sending failed");
-
-        console.error({
-            name: err.name,
-            message: err.message,
-            code: err.code,
-            status: err.status,
-            moreInfo: err.moreInfo,
-            stack: err.stack
-        });
-
-        throw err;
-    }
+        }
+    );
 }
 
 // ===================================
@@ -306,10 +244,9 @@ async function sendSmsOtp(user, otp) {
 // ===================================
 
 async function deliverOtp(user, channel, otp) {
-    const selectedChannel =
-        String(channel || "")
-            .trim()
-            .toLowerCase();
+    const selectedChannel = String(channel || "")
+        .trim()
+        .toLowerCase();
 
     console.log(
         `OTP delivery requested through: ${selectedChannel}`
@@ -326,6 +263,19 @@ async function deliverOtp(user, channel, otp) {
     }
 
     throw new Error("Unsupported OTP channel");
+}
+
+// ===================================
+// Basic HTML escaping
+// ===================================
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 }
 
 module.exports = {
