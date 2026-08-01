@@ -44,7 +44,7 @@ function safeHashCompare(plainValue, storedHash) {
 }
 
 // ===================================
-// Email configuration
+// Nodemailer transporter
 // ===================================
 
 function createEmailTransporter() {
@@ -70,7 +70,7 @@ function createEmailTransporter() {
     const port = Number(
         process.env.EMAIL_PORT ||
         process.env.SMTP_PORT ||
-        587
+        465
     );
 
     const secureValue =
@@ -82,6 +82,16 @@ function createEmailTransporter() {
             ? String(secureValue).toLowerCase() === "true"
             : port === 465;
 
+    console.log("SMTP configuration:", {
+        host,
+        port,
+        secure,
+        user: emailUser,
+        from:
+            process.env.EMAIL_FROM ||
+            emailUser
+    });
+
     return nodemailer.createTransport({
         host,
         port,
@@ -92,9 +102,9 @@ function createEmailTransporter() {
             pass: emailPass
         },
 
-        connectionTimeout: 20000,
-        greetingTimeout: 20000,
-        socketTimeout: 30000,
+        connectionTimeout: 30000,
+        greetingTimeout: 30000,
+        socketTimeout: 45000,
 
         tls: {
             rejectUnauthorized: true
@@ -103,7 +113,7 @@ function createEmailTransporter() {
 }
 
 // ===================================
-// Send Email OTP
+// Email OTP
 // ===================================
 
 async function sendEmailOtp(user, otp) {
@@ -120,68 +130,114 @@ async function sendEmailOtp(user, otp) {
         process.env.EMAIL_USER ||
         process.env.SMTP_USER;
 
-    // Verify SMTP before attempting delivery.
-    await transporter.verify();
+    try {
+        console.log(
+            `Verifying SMTP connection for ${senderEmail}...`
+        );
 
-    const info = await transporter.sendMail({
-        from: `HomeServe <${senderEmail}>`,
-        to: user.email,
-        subject: "HomeServe password reset OTP",
+        await transporter.verify();
 
-        text:
-            `Hello ${user.name || "User"},\n\n` +
-            `Your HomeServe password reset OTP is ${otp}.\n` +
-            "It expires in 10 minutes.\n\n" +
-            "Do not share this OTP with anyone.",
+        console.log("SMTP verification successful");
+    } catch (err) {
+        console.error("SMTP verification failed");
 
-        html: `
-            <div
-                style="
-                    font-family: Arial, sans-serif;
-                    max-width: 520px;
-                    margin: auto;
-                    padding: 24px;
-                    border: 1px solid #e5e7eb;
-                    border-radius: 12px;
-                "
-            >
-                <h2 style="margin-top: 0;">
-                    HomeServe password reset
-                </h2>
+        console.error({
+            name: err.name,
+            message: err.message,
+            code: err.code,
+            command: err.command,
+            response: err.response,
+            responseCode: err.responseCode,
+            stack: err.stack
+        });
 
-                <p>Hello ${user.name || "User"},</p>
+        throw err;
+    }
 
-                <p>
-                    Use the following one-time password to reset
-                    your account password:
-                </p>
+    try {
+        const info = await transporter.sendMail({
+            from: `HomeServe <${senderEmail}>`,
+            to: user.email,
+            subject: "HomeServe password reset OTP",
 
-                <p
+            text:
+                `Hello ${user.name || "User"},\n\n` +
+                `Your HomeServe password reset OTP is ${otp}.\n` +
+                "This OTP expires in 10 minutes.\n\n" +
+                "Do not share this OTP with anyone.",
+
+            html: `
+                <div
                     style="
-                        font-size: 32px;
-                        font-weight: 700;
-                        letter-spacing: 8px;
-                        margin: 24px 0;
+                        font-family: Arial, sans-serif;
+                        max-width: 520px;
+                        margin: auto;
+                        padding: 24px;
+                        border: 1px solid #e5e7eb;
+                        border-radius: 12px;
                     "
                 >
-                    ${otp}
-                </p>
+                    <h2 style="margin-top: 0;">
+                        HomeServe password reset
+                    </h2>
 
-                <p>
-                    This OTP expires in 10 minutes.
-                    Do not share it with anyone.
-                </p>
-            </div>
-        `
-    });
+                    <p>Hello ${user.name || "User"},</p>
 
-    console.log(
-        `Email OTP sent to ${user.email}. Message ID: ${info.messageId}`
-    );
+                    <p>
+                        Use the following one-time password
+                        to reset your account password:
+                    </p>
+
+                    <p
+                        style="
+                            font-size: 32px;
+                            font-weight: 700;
+                            letter-spacing: 8px;
+                            margin: 24px 0;
+                        "
+                    >
+                        ${otp}
+                    </p>
+
+                    <p>
+                        This OTP expires in 10 minutes.
+                        Do not share it with anyone.
+                    </p>
+                </div>
+            `
+        });
+
+        console.log(
+            `Email OTP sent successfully to ${user.email}`
+        );
+
+        console.log({
+            messageId: info.messageId,
+            accepted: info.accepted,
+            rejected: info.rejected,
+            response: info.response
+        });
+    } catch (err) {
+        console.error("Email sending failed");
+
+        console.error({
+            name: err.name,
+            message: err.message,
+            code: err.code,
+            command: err.command,
+            response: err.response,
+            responseCode: err.responseCode,
+            stack: err.stack
+        });
+
+        throw err;
+    } finally {
+        transporter.close();
+    }
 }
 
 // ===================================
-// Send SMS OTP
+// SMS OTP
 // ===================================
 
 async function sendSmsOtp(user, otp) {
@@ -212,17 +268,37 @@ async function sendSmsOtp(user, otp) {
         TWILIO_AUTH_TOKEN
     );
 
-    const message = await client.messages.create({
-        body:
-            `Your HomeServe password reset OTP is ${otp}. ` +
-            "It expires in 10 minutes.",
-        from: TWILIO_PHONE_NUMBER,
-        to: user.phone
-    });
+    try {
+        const message = await client.messages.create({
+            body:
+                `Your HomeServe password reset OTP is ${otp}. ` +
+                "It expires in 10 minutes.",
+            from: TWILIO_PHONE_NUMBER,
+            to: user.phone
+        });
 
-    console.log(
-        `SMS OTP sent to ${user.phone}. SID: ${message.sid}`
-    );
+        console.log(
+            `SMS OTP sent successfully to ${user.phone}`
+        );
+
+        console.log({
+            sid: message.sid,
+            status: message.status
+        });
+    } catch (err) {
+        console.error("SMS sending failed");
+
+        console.error({
+            name: err.name,
+            message: err.message,
+            code: err.code,
+            status: err.status,
+            moreInfo: err.moreInfo,
+            stack: err.stack
+        });
+
+        throw err;
+    }
 }
 
 // ===================================
@@ -231,7 +307,13 @@ async function sendSmsOtp(user, otp) {
 
 async function deliverOtp(user, channel, otp) {
     const selectedChannel =
-        String(channel || "").trim().toLowerCase();
+        String(channel || "")
+            .trim()
+            .toLowerCase();
+
+    console.log(
+        `OTP delivery requested through: ${selectedChannel}`
+    );
 
     if (selectedChannel === "email") {
         await sendEmailOtp(user, otp);
