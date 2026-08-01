@@ -1,374 +1,410 @@
-const API_ORIGIN = (() => {
-    const runtimeOrigin = window.HOMESERVE?.ORIGIN;
-    if (runtimeOrigin) return runtimeOrigin;
+"use strict";
 
-    const isLiveServer = ["5500", "8080"].includes(window.location.port);
-    return isLiveServer ? "http://127.0.0.1:5000" : window.location.origin;
-})();
-const API_URL = `${API_ORIGIN}/api/auth`;
+const isLiveServer =
+    window.location.port === "5500" ||
+    window.location.port === "8080";
 
-const requestOtpForm = document.getElementById("requestOtpForm");
-const verifyOtpForm = document.getElementById("verifyOtpForm");
-const resetPasswordForm = document.getElementById("resetPasswordForm");
-const successPanel = document.getElementById("resetSuccessPanel");
+const API_ORIGIN = isLiveServer
+    ? "http://localhost:5000"
+    : window.location.origin;
 
-const identifierInput = document.getElementById("identifier");
-const otpChannelInput = document.getElementById("otpChannel");
-const otpInput = document.getElementById("otp");
-const newPasswordInput = document.getElementById("newPassword");
-const confirmPasswordInput = document.getElementById("confirmPassword");
-const passwordStrength = document.getElementById("passwordStrength");
-const passwordMatch = document.getElementById("passwordMatch");
-const otpTimer = document.getElementById("otpTimer");
-const stepItems = [...document.querySelectorAll("[data-reset-step]")];
+const API_BASE = `${API_ORIGIN}/api/auth`;
 
-const sendOtpButton = document.getElementById("sendOtpButton");
-const verifyOtpButton = document.getElementById("verifyOtpButton");
-const resetPasswordButton = document.getElementById("resetPasswordButton");
-const resendOtpButton = document.getElementById("resendOtpButton");
-const changeContactButton = document.getElementById("changeContactButton");
-const toggleButtons = [...document.querySelectorAll("[data-toggle-password]")];
-const messageBox = document.getElementById("forgotMessage");
+const state = {
+    identifier: "",
+    resetToken: "",
+    currentStep: 1,
+    requestInProgress: false
+};
 
-let currentIdentifier = "";
-let currentChannel = "email";
-let resetToken = "";
-let countdownId = null;
-let remainingSeconds = 0;
-const RESET_SESSION_KEY = "homeservePasswordResetSession";
+const elements = {
+    message: document.getElementById("message"),
 
-function saveResetSession(step) {
-    sessionStorage.setItem(RESET_SESSION_KEY, JSON.stringify({
-        identifier: currentIdentifier,
-        channel: currentChannel,
-        resetToken,
-        step
-    }));
-}
+    pageTitle: document.getElementById("pageTitle"),
+    pageSubtitle: document.getElementById("pageSubtitle"),
 
-function clearResetSession() {
-    sessionStorage.removeItem(RESET_SESSION_KEY);
-}
+    contactStep: document.getElementById("contactStep"),
+    otpStep: document.getElementById("otpStep"),
+    passwordStep: document.getElementById("passwordStep"),
+    doneStep: document.getElementById("doneStep"),
 
+    contactForm: document.getElementById("contactForm"),
+    otpForm: document.getElementById("otpForm"),
+    passwordForm: document.getElementById("passwordForm"),
 
-function setStep(step) {
-    stepItems.forEach((item) => {
-        const itemStep = Number(item.dataset.resetStep);
-        item.classList.toggle("active", itemStep === step);
-        item.classList.toggle("complete", itemStep < step);
-    });
-}
+    identifierInput: document.getElementById("identifierInput"),
+    otpInput: document.getElementById("otpInput"),
+    newPasswordInput: document.getElementById("newPasswordInput"),
+    confirmPasswordInput: document.getElementById(
+        "confirmPasswordInput"
+    ),
 
-function showOnly(form) {
-    [requestOtpForm, verifyOtpForm, resetPasswordForm, successPanel].forEach((element) => {
-        if (element) element.hidden = element !== form;
-    });
-}
+    sendOtpButton: document.getElementById("sendOtpButton"),
+    verifyOtpButton: document.getElementById("verifyOtpButton"),
+    resendOtpButton: document.getElementById("resendOtpButton"),
+    resetPasswordButton: document.getElementById(
+        "resetPasswordButton"
+    ),
 
-function showMessage(message, type = "success") {
-    messageBox.textContent = message;
-    messageBox.className = `page-message reset-message ${type}`;
-    messageBox.hidden = false;
+    stepIndicators: [
+        document.getElementById("stepIndicator1"),
+        document.getElementById("stepIndicator2"),
+        document.getElementById("stepIndicator3"),
+        document.getElementById("stepIndicator4")
+    ]
+};
+
+function showMessage(message, type = "error") {
+    elements.message.textContent = message;
+    elements.message.className = `message ${type}`;
 }
 
 function clearMessage() {
-    messageBox.textContent = "";
-    messageBox.hidden = true;
+    elements.message.textContent = "";
+    elements.message.className = "message";
 }
 
 function setButtonLoading(button, loading, normalText) {
     button.disabled = loading;
-    button.innerHTML = loading
-        ? '<span class="button-spinner" aria-hidden="true"></span>Please wait...'
-        : normalText;
+    button.textContent = loading ? "Please wait..." : normalText;
 }
 
-function normalizeIdentifier(value, channel = currentChannel) {
-    const raw = String(value || "").trim();
-    if (!raw || raw.includes("@")) return raw.toLowerCase();
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
-    const digits = raw.replace(/\D/g, "");
+async function readJsonResponse(response) {
+    const contentType = response.headers.get("content-type") || "";
 
-    // Accept ordinary 10-digit Indian numbers and convert them to E.164 for SMS.
-    if (channel === "sms") {
-        if (digits.length === 10) return `+91${digits}`;
-        if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
-        if (raw.startsWith("+") && digits.length >= 10 && digits.length <= 15) return `+${digits}`;
+    if (!contentType.includes("application/json")) {
+        throw new Error("The server returned an invalid response.");
     }
 
-    return raw;
+    const data = await response.json();
+
+    if (!response.ok || data.success === false) {
+        throw new Error(
+            data.message ||
+            `Request failed with status ${response.status}`
+        );
+    }
+
+    return data;
 }
 
-function isValidIdentifier(value) {
-    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phone = /^\+?[0-9][0-9\s-]{8,14}$/;
-    return email.test(value) || phone.test(value);
+async function postJson(path, body) {
+    const response = await fetch(`${API_BASE}${path}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify(body)
+    });
+
+    return readJsonResponse(response);
 }
 
-function startCountdown(seconds = 600) {
-    clearInterval(countdownId);
-    remainingSeconds = seconds;
-    resendOtpButton.disabled = true;
+function updateStepIndicators(stepNumber) {
+    elements.stepIndicators.forEach((indicator, index) => {
+        const indicatorStep = index + 1;
 
-    const update = () => {
-        const minutes = Math.floor(remainingSeconds / 60);
-        const secondsPart = String(remainingSeconds % 60).padStart(2, "0");
-        otpTimer.textContent = remainingSeconds > 0
-            ? `Code expires in ${minutes}:${secondsPart}`
-            : "Code expired. Request a new OTP.";
+        indicator.classList.remove("active", "completed");
 
-        resendOtpButton.textContent = remainingSeconds > 0
-            ? `Resend OTP in ${remainingSeconds}s`
-            : "Resend OTP";
+        if (indicatorStep < stepNumber) {
+            indicator.classList.add("completed");
+        } else if (indicatorStep === stepNumber) {
+            indicator.classList.add("active");
+        }
+    });
+}
 
-        if (remainingSeconds <= 0) {
-            resendOtpButton.disabled = false;
-            clearInterval(countdownId);
+function showStep(stepNumber) {
+    state.currentStep = stepNumber;
+
+    const sections = [
+        elements.contactStep,
+        elements.otpStep,
+        elements.passwordStep,
+        elements.doneStep
+    ];
+
+    sections.forEach((section, index) => {
+        section.classList.toggle(
+            "active",
+            index + 1 === stepNumber
+        );
+    });
+
+    updateStepIndicators(stepNumber);
+    clearMessage();
+
+    if (stepNumber === 1) {
+        elements.pageTitle.textContent = "Reset your password";
+        elements.pageSubtitle.textContent =
+            "Receive a verification code at your registered email address.";
+
+        elements.identifierInput.focus();
+    }
+
+    if (stepNumber === 2) {
+        elements.pageTitle.textContent = "Verify your email";
+        elements.pageSubtitle.textContent =
+            `Enter the 6-digit OTP sent to ${state.identifier}.`;
+
+        elements.otpInput.value = "";
+        elements.otpInput.focus();
+    }
+
+    if (stepNumber === 3) {
+        elements.pageTitle.textContent = "Create a new password";
+        elements.pageSubtitle.textContent =
+            "Choose a secure password for your HomeServe account.";
+
+        elements.newPasswordInput.focus();
+    }
+
+    if (stepNumber === 4) {
+        elements.pageTitle.textContent = "Password updated";
+        elements.pageSubtitle.textContent =
+            "Your HomeServe account is ready to use.";
+    }
+}
+
+async function requestEmailOtp({ isResend = false } = {}) {
+    if (state.requestInProgress) {
+        return;
+    }
+
+    const identifier = isResend
+        ? state.identifier
+        : elements.identifierInput.value.trim().toLowerCase();
+
+    if (!isValidEmail(identifier)) {
+        showMessage(
+            "Enter a valid registered email address.",
+            "error"
+        );
+        return;
+    }
+
+    state.requestInProgress = true;
+    state.identifier = identifier;
+
+    const button = isResend
+        ? elements.resendOtpButton
+        : elements.sendOtpButton;
+
+    const normalText = isResend
+        ? "Resend Email OTP"
+        : "Send Email OTP";
+
+    setButtonLoading(button, true, normalText);
+    clearMessage();
+
+    try {
+        const data = await postJson(
+            "/forgot-password/request-otp",
+            {
+                identifier,
+                channel: "email"
+            }
+        );
+
+        if (!isResend) {
+            showStep(2);
+        }
+
+        showMessage(
+            data.message ||
+            "OTP sent successfully to your registered email.",
+            "success"
+        );
+
+        // Only displayed when OTP_DEV_MODE=true.
+        if (data.devOtp) {
+            showMessage(
+                `${data.message} Development OTP: ${data.devOtp}`,
+                "success"
+            );
+        }
+    } catch (error) {
+        showMessage(
+            error.message ||
+            "Unable to send email OTP. Please try again.",
+            "error"
+        );
+    } finally {
+        state.requestInProgress = false;
+        setButtonLoading(button, false, normalText);
+    }
+}
+
+elements.contactForm.addEventListener(
+    "submit",
+    async (event) => {
+        event.preventDefault();
+        await requestEmailOtp();
+    }
+);
+
+elements.resendOtpButton.addEventListener(
+    "click",
+    async () => {
+        await requestEmailOtp({ isResend: true });
+    }
+);
+
+elements.otpInput.addEventListener("input", () => {
+    elements.otpInput.value = elements.otpInput.value
+        .replace(/\D/g, "")
+        .slice(0, 6);
+});
+
+elements.otpForm.addEventListener(
+    "submit",
+    async (event) => {
+        event.preventDefault();
+
+        const otp = elements.otpInput.value.trim();
+
+        if (!/^\d{6}$/.test(otp)) {
+            showMessage(
+                "Enter the complete 6-digit OTP.",
+                "error"
+            );
             return;
         }
 
-        remainingSeconds -= 1;
-        if (remainingSeconds <= 540) resendOtpButton.disabled = false;
-    };
+        setButtonLoading(
+            elements.verifyOtpButton,
+            true,
+            "Verify OTP"
+        );
 
-    update();
-    countdownId = setInterval(update, 1000);
-}
-
-async function readJson(response) {
-    const text = await response.text();
-    try {
-        return text ? JSON.parse(text) : {};
-    } catch {
-        return { message: "The server returned an invalid response." };
-    }
-}
-
-async function sendOtp({ isResend = false } = {}) {
-    clearMessage();
-    const enteredIdentifier = normalizeIdentifier(identifierInput.value, otpChannelInput.value);
-    currentIdentifier = enteredIdentifier || currentIdentifier;
-    currentChannel = otpChannelInput.value || currentChannel;
-
-    if (!currentIdentifier || !isValidIdentifier(currentIdentifier)) {
-        showMessage("Enter a valid registered email address or phone number.", "error");
-        identifierInput.focus();
-        return;
-    }
-
-    const activeButton = isResend ? resendOtpButton : sendOtpButton;
-    setButtonLoading(activeButton, true, isResend ? "Resend OTP" : "Send OTP");
-
-    try {
-        const response = await fetch(`${API_URL}/forgot-password/request-otp`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                identifier: currentIdentifier,
-                channel: currentChannel
-            })
-        });
-
-        const data = await readJson(response);
-        if (!response.ok) throw new Error(data.message || "Unable to send OTP.");
-
-        showOnly(verifyOtpForm);
-        setStep(2);
-        saveResetSession(2);
-        otpInput.value = "";
-        startCountdown(Number(data.expiresInSeconds) || 600);
-
-        let message = data.message || "OTP sent successfully.";
-        if (data.devOtp) message += ` Development OTP: ${data.devOtp}`;
-        showMessage(message, "success");
-        otpInput.focus();
-    } catch (error) {
-        showMessage(error.message || "Unable to connect to the server.", "error");
-    } finally {
-        setButtonLoading(activeButton, false, isResend ? "Resend OTP" : "Send OTP");
-    }
-}
-
-requestOtpForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    await sendOtp();
-});
-
-verifyOtpForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    clearMessage();
-
-    const otp = otpInput.value.replace(/\D/g, "").slice(0, 6);
-    otpInput.value = otp;
-
-    if (!/^\d{6}$/.test(otp)) {
-        showMessage("Enter the complete 6-digit OTP.", "error");
-        otpInput.focus();
-        return;
-    }
-
-    setButtonLoading(verifyOtpButton, true, "Verify OTP");
-
-    try {
-        const response = await fetch(`${API_URL}/forgot-password/verify-otp`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ identifier: currentIdentifier, otp })
-        });
-
-        const data = await readJson(response);
-        if (!response.ok) throw new Error(data.message || "OTP verification failed.");
-
-        resetToken = data.resetToken;
-        if (!resetToken) throw new Error("Reset token was not received.");
-
-        clearInterval(countdownId);
-        showOnly(resetPasswordForm);
-        setStep(3);
-        saveResetSession(3);
-        showMessage(data.message || "OTP verified. Create your new password.", "success");
-        newPasswordInput.focus();
-    } catch (error) {
-        showMessage(error.message || "Unable to verify OTP.", "error");
-    } finally {
-        setButtonLoading(verifyOtpButton, false, "Verify OTP");
-    }
-});
-
-function passwordScore(password) {
-    let score = 0;
-    if (password.length >= 8) score += 1;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
-    if (/\d/.test(password)) score += 1;
-    if (/[^A-Za-z0-9]/.test(password)) score += 1;
-    return score;
-}
-
-function updatePasswordFeedback() {
-    const password = newPasswordInput.value;
-    const score = passwordScore(password);
-    const labels = ["Use at least 8 characters", "Weak password", "Fair password", "Good password", "Strong password"];
-    passwordStrength.textContent = labels[score];
-    passwordStrength.dataset.score = String(score);
-
-    if (!confirmPasswordInput.value) {
-        passwordMatch.textContent = "";
-        return;
-    }
-
-    const matches = password === confirmPasswordInput.value;
-    passwordMatch.textContent = matches ? "Passwords match" : "Passwords do not match";
-    passwordMatch.className = `field-feedback ${matches ? "valid" : "invalid"}`;
-}
-
-newPasswordInput?.addEventListener("input", updatePasswordFeedback);
-confirmPasswordInput?.addEventListener("input", updatePasswordFeedback);
-
-resetPasswordForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    clearMessage();
-
-    const newPassword = newPasswordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
-
-    if (newPassword.length < 8 || passwordScore(newPassword) < 3) {
-        showMessage("Use at least 8 characters with uppercase, lowercase, a number and preferably a symbol.", "error");
-        newPasswordInput.focus();
-        return;
-    }
-
-    if (newPassword !== confirmPassword) {
-        showMessage("The two passwords do not match.", "error");
-        confirmPasswordInput.focus();
-        return;
-    }
-
-    if (!currentIdentifier || !resetToken) {
-        showMessage("Your reset session is missing or expired. Request another OTP.", "error");
-        showOnly(requestOtpForm);
-        setStep(1);
-        return;
-    }
-
-    setButtonLoading(resetPasswordButton, true, "Reset password");
-
-    try {
-        const response = await fetch(`${API_URL}/forgot-password/reset`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                identifier: currentIdentifier,
-                resetToken,
-                newPassword
-            })
-        });
-
-        const data = await readJson(response);
-        if (!response.ok) throw new Error(data.message || "Password reset failed.");
-
-        resetToken = "";
-        clearResetSession();
-        showOnly(successPanel);
-        setStep(4);
         clearMessage();
-    } catch (error) {
-        showMessage(error.message || "Unable to reset password.", "error");
-    } finally {
-        setButtonLoading(resetPasswordButton, false, "Reset password");
+
+        try {
+            const data = await postJson(
+                "/forgot-password/verify-otp",
+                {
+                    identifier: state.identifier,
+                    otp
+                }
+            );
+
+            if (!data.resetToken) {
+                throw new Error(
+                    "The reset token was not returned by the server."
+                );
+            }
+
+            state.resetToken = data.resetToken;
+            showStep(3);
+
+            showMessage(
+                data.message ||
+                "OTP verified successfully.",
+                "success"
+            );
+        } catch (error) {
+            showMessage(
+                error.message ||
+                "Unable to verify OTP.",
+                "error"
+            );
+        } finally {
+            setButtonLoading(
+                elements.verifyOtpButton,
+                false,
+                "Verify OTP"
+            );
+        }
     }
-});
+);
 
-resendOtpButton?.addEventListener("click", async () => sendOtp({ isResend: true }));
+elements.passwordForm.addEventListener(
+    "submit",
+    async (event) => {
+        event.preventDefault();
 
-changeContactButton?.addEventListener("click", () => {
-    clearInterval(countdownId);
-    resetToken = "";
-    clearResetSession();
-    otpInput.value = "";
-    showOnly(requestOtpForm);
-    setStep(1);
-    clearMessage();
-    identifierInput.focus();
-});
+        const newPassword =
+            elements.newPasswordInput.value;
 
-otpInput?.addEventListener("input", () => {
-    otpInput.value = otpInput.value.replace(/\D/g, "").slice(0, 6);
-});
+        const confirmPassword =
+            elements.confirmPasswordInput.value;
 
-toggleButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-        const input = document.getElementById(button.dataset.togglePassword);
-        if (!input) return;
-        const visible = input.type === "text";
-        input.type = visible ? "password" : "text";
-        button.textContent = visible ? "Show" : "Hide";
-        button.setAttribute("aria-pressed", String(!visible));
-    });
-});
+        if (newPassword.length < 8) {
+            showMessage(
+                "Password must contain at least 8 characters.",
+                "error"
+            );
+            return;
+        }
 
-try {
-    const saved = JSON.parse(sessionStorage.getItem(RESET_SESSION_KEY) || "null");
-    if (saved?.identifier) {
-        currentIdentifier = saved.identifier;
-        currentChannel = saved.channel || "email";
-        identifierInput.value = currentIdentifier;
-        otpChannelInput.value = currentChannel;
+        if (
+            !/[a-z]/.test(newPassword) ||
+            !/[A-Z]/.test(newPassword) ||
+            !/\d/.test(newPassword)
+        ) {
+            showMessage(
+                "Password must include uppercase, lowercase and a number.",
+                "error"
+            );
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showMessage(
+                "The password confirmation does not match.",
+                "error"
+            );
+            return;
+        }
+
+        if (!state.resetToken) {
+            showMessage(
+                "Your reset session is missing. Request another OTP.",
+                "error"
+            );
+            showStep(1);
+            return;
+        }
+
+        setButtonLoading(
+            elements.resetPasswordButton,
+            true,
+            "Reset Password"
+        );
+
+        clearMessage();
+
+        try {
+            await postJson(
+                "/forgot-password/reset",
+                {
+                    identifier: state.identifier,
+                    resetToken: state.resetToken,
+                    newPassword
+                }
+            );
+
+            state.resetToken = "";
+            showStep(4);
+        } catch (error) {
+            showMessage(
+                error.message ||
+                "Unable to reset the password.",
+                "error"
+            );
+        } finally {
+            setButtonLoading(
+                elements.resetPasswordButton,
+                false,
+                "Reset Password"
+            );
+        }
     }
-    if (saved?.step === 3 && saved?.resetToken) {
-        resetToken = saved.resetToken;
-        showOnly(resetPasswordForm);
-        setStep(3);
-        showMessage("Reset session restored. Enter your new password.", "success");
-    } else if (saved?.step === 2 && saved?.identifier) {
-        showOnly(verifyOtpForm);
-        setStep(2);
-        startCountdown(600);
-    } else {
-        showOnly(requestOtpForm);
-        setStep(1);
-    }
-} catch {
-    clearResetSession();
-    showOnly(requestOtpForm);
-    setStep(1);
-}
+);
+
+showStep(1);
