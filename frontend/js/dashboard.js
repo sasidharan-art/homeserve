@@ -1,62 +1,416 @@
+"use strict";
+
+// =====================================================
+// API AND AUTHENTICATION
+// =====================================================
+
 const API = `${window.location.origin}/api`;
 
 const token = localStorage.getItem("token");
-const customerName = localStorage.getItem("name") || "Customer";
+const customerName =
+    localStorage.getItem("name") || "Customer";
 
 if (!token) {
-    window.location.href = "login.html";
+    window.location.replace("login.html");
 }
 
-const welcome = document.getElementById("welcome");
-const servicesContainer = document.getElementById("services");
-const messageBox = document.getElementById("serviceMessage");
-const searchInput = document.getElementById("serviceSearch");
-const heroSearch = document.getElementById("heroSearch");
-const filterContainer = document.getElementById("categoryFilters");
+// =====================================================
+// PAGE ELEMENTS
+// =====================================================
+
+const welcome =
+    document.getElementById("welcome");
+
+const sidebarUserName =
+    document.getElementById("sidebarUserName");
+
+const userAvatar =
+    document.getElementById("userAvatar");
+
+const logoutBtn =
+    document.getElementById("logoutBtn");
+
+const servicesContainer =
+    document.getElementById("services");
+
+const serviceMessage =
+    document.getElementById("serviceMessage");
+
+const serviceSearch =
+    document.getElementById("serviceSearch");
+
+const heroSearch =
+    document.getElementById("heroSearch");
+
+const heroSearchBtn =
+    document.getElementById("heroSearchBtn");
+
+const categoryFilters =
+    document.getElementById("categoryFilters");
+
+const quickCategories =
+    document.getElementById("quickCategories");
+
+const recentSection =
+    document.getElementById("recentSection");
+
+const recentServicesContainer =
+    document.getElementById("recentServices");
+
+const showFavoritesAction =
+    document.getElementById("showFavoritesAction");
+
+const notificationBtn =
+    document.getElementById("notificationBtn");
+
+const notificationPanel =
+    document.getElementById("notificationPanel");
+
+const themeToggle =
+    document.getElementById("themeToggle");
+
+const metricTotalBookings =
+    document.getElementById("metricTotalBookings");
+
+const metricActiveBookings =
+    document.getElementById("metricActiveBookings");
+
+const metricCompletedBookings =
+    document.getElementById("metricCompletedBookings");
+
+const metricTotalSpent =
+    document.getElementById("metricTotalSpent");
+
+const upcomingBookingContent =
+    document.getElementById("upcomingBookingContent");
+
+const dashboardBookingMessage =
+    document.getElementById("dashboardBookingMessage");
+
+const dashboardAverageRating =
+    document.getElementById("dashboardAverageRating");
+
+const dashboardReviewCount =
+    document.getElementById("dashboardReviewCount");
+
+const reviewAvatarStack =
+    document.getElementById("reviewAvatarStack");
+
+const customerTestimonials =
+    document.getElementById("customerTestimonials");
+
+// =====================================================
+// DASHBOARD STATE
+// =====================================================
 
 let allServices = [];
+
 let activeCategory = "All";
 
-let favorites = JSON.parse(
-    localStorage.getItem("favoriteServices") || "[]"
+let favorites = readStoredArray(
+    "favoriteServices"
 );
 
-let recent = JSON.parse(
-    localStorage.getItem("recentServices") || "[]"
+let recentServices = readStoredArray(
+    "recentServices"
 );
 
-// ===================================
-// Customer details
-// ===================================
+// =====================================================
+// LOCAL-STORAGE HELPERS
+// =====================================================
 
-if (welcome) {
-    welcome.textContent = `Welcome, ${customerName} 👋`;
+function readStoredArray(key) {
+    try {
+        const value = JSON.parse(
+            localStorage.getItem(key) || "[]"
+        );
+
+        return Array.isArray(value)
+            ? value
+            : [];
+    } catch (error) {
+        console.warn(
+            `Unable to read ${key}:`,
+            error
+        );
+
+        return [];
+    }
 }
 
-const sidebarUserName = document.getElementById("sidebarUserName");
-
-if (sidebarUserName) {
-    sidebarUserName.textContent = customerName;
+function saveStoredArray(key, value) {
+    localStorage.setItem(
+        key,
+        JSON.stringify(value)
+    );
 }
 
-const userAvatar = document.getElementById("userAvatar");
+// =====================================================
+// GENERAL HELPERS
+// =====================================================
 
-if (userAvatar) {
-    userAvatar.textContent = customerName
-        .charAt(0)
-        .toUpperCase();
+function safeText(value) {
+    return String(value ?? "");
 }
 
-document
-    .getElementById("logoutBtn")
-    ?.addEventListener("click", () => {
-        localStorage.clear();
-        window.location.href = "login.html";
-    });
+function escapeHtml(value) {
+    return safeText(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
 
-// ===================================
-// Service helpers
-// ===================================
+async function readJsonResponse(response) {
+    const contentType =
+        response.headers.get("content-type") || "";
+
+    if (
+        !contentType.includes(
+            "application/json"
+        )
+    ) {
+        throw new Error(
+            `Invalid server response (${response.status})`
+        );
+    }
+
+    const data = await response.json();
+
+    if (
+        !response.ok ||
+        data.success === false
+    ) {
+        throw new Error(
+            data.message ||
+            `Request failed (${response.status})`
+        );
+    }
+
+    return data;
+}
+
+async function apiGet(
+    path,
+    authenticated = false
+) {
+    const headers = {
+        Accept: "application/json"
+    };
+
+    if (authenticated) {
+        headers.Authorization = token;
+    }
+
+    const response = await fetch(
+        `${API}${path}`,
+        {
+            method: "GET",
+            headers,
+            cache: "no-store"
+        }
+    );
+
+    return readJsonResponse(response);
+}
+
+function formatCurrency(value) {
+    return `₹${Number(
+        value || 0
+    ).toLocaleString("en-IN")}`;
+}
+
+function formatBookingDate(value) {
+    if (!value) {
+        return "Date not available";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "Date not available";
+    }
+
+    return new Intl.DateTimeFormat(
+        "en-IN",
+        {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+            year: "numeric"
+        }
+    ).format(date);
+}
+
+function statusClass(status) {
+    return safeText(status)
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+}
+
+// =====================================================
+// CUSTOMER DETAILS
+// =====================================================
+
+function initialiseCustomer() {
+    if (welcome) {
+        welcome.textContent =
+            `Welcome, ${customerName} 👋`;
+    }
+
+    if (sidebarUserName) {
+        sidebarUserName.textContent =
+            customerName;
+    }
+
+    if (userAvatar) {
+        userAvatar.textContent =
+            customerName
+                .trim()
+                .charAt(0)
+                .toUpperCase() || "C";
+    }
+
+    logoutBtn?.addEventListener(
+        "click",
+        () => {
+            localStorage.clear();
+
+            window.location.replace(
+                "login.html"
+            );
+        }
+    );
+}
+
+// =====================================================
+// NOTIFICATION PANEL
+// =====================================================
+
+function setNotificationOpen(isOpen) {
+    if (
+        !notificationBtn ||
+        !notificationPanel
+    ) {
+        return;
+    }
+
+    notificationPanel.classList.toggle(
+        "open",
+        isOpen
+    );
+
+    notificationBtn.setAttribute(
+        "aria-expanded",
+        isOpen ? "true" : "false"
+    );
+}
+
+function initialiseNotifications() {
+    if (
+        !notificationBtn ||
+        !notificationPanel
+    ) {
+        return;
+    }
+
+    notificationBtn.type = "button";
+
+    notificationBtn.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    notificationBtn.addEventListener(
+        "click",
+        (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const isOpen =
+                notificationPanel
+                    .classList
+                    .contains("open");
+
+            setNotificationOpen(!isOpen);
+        }
+    );
+
+    notificationPanel.addEventListener(
+        "click",
+        (event) => {
+            event.stopPropagation();
+        }
+    );
+
+    document.addEventListener(
+        "click",
+        () => {
+            setNotificationOpen(false);
+        }
+    );
+
+    document.addEventListener(
+        "keydown",
+        (event) => {
+            if (event.key === "Escape") {
+                setNotificationOpen(false);
+
+                notificationBtn.focus();
+            }
+        }
+    );
+}
+
+// =====================================================
+// THEME
+// =====================================================
+
+function applyTheme(theme) {
+    document.documentElement.dataset.theme =
+        theme;
+
+    if (themeToggle) {
+        themeToggle.textContent =
+            theme === "dark"
+                ? "☀"
+                : "☾";
+    }
+
+    localStorage.setItem(
+        "homeserveTheme",
+        theme
+    );
+}
+
+function initialiseTheme() {
+    const savedTheme =
+        localStorage.getItem(
+            "homeserveTheme"
+        ) || "light";
+
+    applyTheme(savedTheme);
+
+    themeToggle?.addEventListener(
+        "click",
+        () => {
+            const currentTheme =
+                document.documentElement
+                    .dataset.theme;
+
+            applyTheme(
+                currentTheme === "dark"
+                    ? "light"
+                    : "dark"
+            );
+        }
+    );
+}
+
+// =====================================================
+// SERVICE HELPERS
+// =====================================================
 
 const serviceIcons = {
     appliance: "🧰",
@@ -69,24 +423,39 @@ const serviceIcons = {
     plumbing: "🔧"
 };
 
-function safeText(value) {
-    return String(value ?? "");
+function getServiceId(service) {
+    return String(
+        service?._id ||
+        service?.id ||
+        ""
+    );
 }
 
-function serviceId(service) {
-    return service._id || service.id;
-}
+function getServiceIcon(service) {
+    const category = safeText(
+        service?.category
+    ).toLowerCase();
 
-function getIcon(service) {
-    const category = safeText(service.category).toLowerCase();
-    const name = safeText(service.name).toLowerCase();
+    const name = safeText(
+        service?.name
+    ).toLowerCase();
 
     if (name.includes("ac")) {
         return "❄️";
     }
 
-    if (name.includes("water tank")) {
+    if (
+        name.includes("water tank")
+    ) {
         return "💧";
+    }
+
+    if (name.includes("pest")) {
+        return "🐜";
+    }
+
+    if (name.includes("garden")) {
+        return "🌿";
     }
 
     return serviceIcons[category] || "🏠";
@@ -100,193 +469,35 @@ function getGradient(index) {
         "service-amber"
     ];
 
-    return gradients[index % gradients.length];
-}
-
-// ===================================
-// Quick categories
-// ===================================
-
-function renderQuickCategories() {
-    const quickCategories =
-        document.getElementById("quickCategories");
-
-    if (!quickCategories) {
-        return;
-    }
-
-    const categories = [
-        ...new Map(
-            allServices.map((service) => [
-                safeText(service.category),
-                service
-            ])
-        ).values()
-    ].slice(0, 8);
-
-    quickCategories.innerHTML = categories
-        .map(
-            (service, index) => `
-                <button
-                    class="quick-category ${getGradient(index)}"
-                    data-category="${safeText(service.category)}"
-                    type="button"
-                >
-                    <i>${getIcon(service)}</i>
-                    <span>${safeText(service.category)}</span>
-                    <small>Explore →</small>
-                </button>
-            `
-        )
-        .join("");
-
-    document
-        .querySelectorAll(".quick-category")
-        .forEach((button) => {
-            button.addEventListener("click", () => {
-                activeCategory = button.dataset.category;
-
-                renderFilters();
-                renderServices();
-
-                document
-                    .getElementById("servicesSection")
-                    ?.scrollIntoView({
-                        behavior: "smooth"
-                    });
-            });
-        });
-}
-
-// ===================================
-// Category filters
-// ===================================
-
-function renderFilters() {
-    if (!filterContainer) {
-        return;
-    }
-
-    const categories = [
-        "All",
-        ...new Set(
-            allServices
-                .map((service) =>
-                    safeText(service.category)
-                )
-                .filter(Boolean)
-        )
+    return gradients[
+        index % gradients.length
     ];
-
-    filterContainer.innerHTML = "";
-
-    categories.forEach((category) => {
-        const button = document.createElement("button");
-
-        button.type = "button";
-
-        button.className =
-            `category-filter${
-                category === activeCategory
-                    ? " active"
-                    : ""
-            }`;
-
-        button.textContent = category;
-
-        button.addEventListener("click", () => {
-            activeCategory = category;
-
-            renderFilters();
-            renderServices();
-        });
-
-        filterContainer.appendChild(button);
-    });
 }
-
-// ===================================
-// Favorites
-// ===================================
-
-function toggleFavorite(id) {
-    favorites = favorites.includes(id)
-        ? favorites.filter((item) => item !== id)
-        : [...favorites, id];
-
-    localStorage.setItem(
-        "favoriteServices",
-        JSON.stringify(favorites)
-    );
-
-    renderServices();
-    renderRecent();
-}
-
-// ===================================
-// Recently viewed services
-// ===================================
-
-function rememberService(id) {
-    recent = [
-        id,
-        ...recent.filter((item) => item !== id)
-    ].slice(0, 4);
-
-    localStorage.setItem(
-        "recentServices",
-        JSON.stringify(recent)
-    );
-
-    renderRecent();
-}
-
-// ===================================
-// Book service
-// ===================================
-
-function bookService(id) {
-    if (!id) {
-        return;
-    }
-
-    rememberService(id);
-
-    localStorage.setItem("serviceId", id);
-
-    window.location.href = "booking.html";
-}
-
-// ===================================
-// Real customer rating display
-// ===================================
 
 function getRatingMarkup(service) {
-    /*
-     * No default rating is displayed.
-     *
-     * If your backend later supplies these fields:
-     * service.averageRating
-     * service.reviewCount
-     *
-     * actual customer ratings will appear automatically.
-     */
+    const averageRating = Number(
+        service?.averageRating || 0
+    );
 
-    const averageRating =
-        Number(service.averageRating || 0);
+    const reviewCount = Number(
+        service?.reviewCount || 0
+    );
 
-    const reviewCount =
-        Number(service.reviewCount || 0);
-
-    if (averageRating > 0 && reviewCount > 0) {
+    if (
+        averageRating > 0 &&
+        reviewCount > 0
+    ) {
         return `
             <span>
                 ★ ${averageRating.toFixed(1)}
+
                 <small>
                     (${reviewCount}
-                    ${reviewCount === 1
-                        ? " review"
-                        : " reviews"})
+                    ${
+                        reviewCount === 1
+                            ? "review"
+                            : "reviews"
+                    })
                 </small>
             </span>
         `;
@@ -299,18 +510,81 @@ function getRatingMarkup(service) {
     `;
 }
 
-// ===================================
-// Create service card
-// ===================================
+// =====================================================
+// FAVOURITES AND RECENT SERVICES
+// =====================================================
+
+function rememberService(id) {
+    if (!id) {
+        return;
+    }
+
+    recentServices = [
+        id,
+        ...recentServices.filter(
+            (item) =>
+                String(item) !== String(id)
+        )
+    ].slice(0, 4);
+
+    saveStoredArray(
+        "recentServices",
+        recentServices
+    );
+
+    renderRecentServices();
+}
+
+function toggleFavorite(id) {
+    if (!id) {
+        return;
+    }
+
+    favorites = favorites.includes(id)
+        ? favorites.filter(
+            (item) => item !== id
+        )
+        : [...favorites, id];
+
+    saveStoredArray(
+        "favoriteServices",
+        favorites
+    );
+
+    renderServices();
+    renderRecentServices();
+}
+
+function bookService(id) {
+    if (!id) {
+        return;
+    }
+
+    rememberService(id);
+
+    localStorage.setItem(
+        "serviceId",
+        id
+    );
+
+    window.location.href =
+        "booking.html";
+}
+
+// =====================================================
+// SERVICE CARD
+// =====================================================
 
 function createServiceCard(
     service,
     index,
     compact = false
 ) {
-    const id = serviceId(service);
+    const id =
+        getServiceId(service);
 
-    const card = document.createElement("article");
+    const card =
+        document.createElement("article");
 
     card.className = compact
         ? "recent-service-card"
@@ -318,45 +592,68 @@ function createServiceCard(
 
     card.style.setProperty(
         "--delay",
-        `${Math.min(index * 70, 420)}ms`
+        `${Math.min(
+            index * 70,
+            420
+        )}ms`
     );
 
     card.innerHTML = `
-        <div class="service-visual ${getGradient(index)}">
-            <span>${getIcon(service)}</span>
+        <div
+            class="
+                service-visual
+                ${getGradient(index)}
+            "
+        >
+            <span>
+                ${getServiceIcon(service)}
+            </span>
 
             <small>
-                ${index < 2 ? "POPULAR" : "TRUSTED"}
+                ${
+                    index < 2
+                        ? "POPULAR"
+                        : "TRUSTED"
+                }
             </small>
 
             <button
-                class="favorite-btn ${
-                    favorites.includes(id)
-                        ? "active"
-                        : ""
-                }"
+                class="
+                    favorite-btn
+                    ${
+                        favorites.includes(id)
+                            ? "active"
+                            : ""
+                    }
+                "
                 type="button"
                 aria-label="Save service"
             >
-                ${favorites.includes(id) ? "♥" : "♡"}
+                ${
+                    favorites.includes(id)
+                        ? "♥"
+                        : "♡"
+                }
             </button>
         </div>
 
         <div class="service-card-content">
             <div class="service-card-label">
-                ${safeText(
-                    service.category || "Home Service"
+                ${escapeHtml(
+                    service.category ||
+                    "Home Service"
                 )}
             </div>
 
             <h3>
-                ${safeText(
-                    service.name || "Home Service"
+                ${escapeHtml(
+                    service.name ||
+                    "Home Service"
                 )}
             </h3>
 
             <p>
-                ${safeText(
+                ${escapeHtml(
                     service.description ||
                     "Professional doorstep service from a trusted expert."
                 )}
@@ -376,19 +673,24 @@ function createServiceCard(
 
             <div class="service-card-bottom">
                 <div class="service-price">
-                    <small>Starts from</small>
+                    <small>
+                        Starts from
+                    </small>
 
                     <strong>
-                        ₹${Number(
-                            service.price || 0
-                        ).toLocaleString("en-IN")}
+                        ${formatCurrency(
+                            service.price
+                        )}
                     </strong>
                 </div>
 
                 <button
-                    class="service-btn premium-book-btn"
+                    class="
+                        service-btn
+                        premium-book-btn
+                    "
                     type="button"
-                    ${!id ? "disabled" : ""}
+                    ${id ? "" : "disabled"}
                 >
                     Book now →
                 </button>
@@ -396,152 +698,371 @@ function createServiceCard(
         </div>
     `;
 
-    card
-        .querySelector(".favorite-btn")
-        ?.addEventListener("click", (event) => {
+    const favoriteButton =
+        card.querySelector(
+            ".favorite-btn"
+        );
+
+    favoriteButton?.addEventListener(
+        "click",
+        (event) => {
             event.stopPropagation();
+
             toggleFavorite(id);
-        });
-
-    card
-        .querySelector(".premium-book-btn")
-        ?.addEventListener("click", () => {
-            bookService(id);
-        });
-
-    card.addEventListener("click", (event) => {
-        if (!event.target.closest("button")) {
-            rememberService(id);
         }
-    });
+    );
+
+    const bookButton =
+        card.querySelector(
+            ".premium-book-btn"
+        );
+
+    bookButton?.addEventListener(
+        "click",
+        () => {
+            bookService(id);
+        }
+    );
+
+    card.addEventListener(
+        "click",
+        (event) => {
+            if (
+                !event.target.closest(
+                    "button"
+                )
+            ) {
+                rememberService(id);
+            }
+        }
+    );
 
     return card;
 }
 
-// ===================================
-// Render services
-// ===================================
+// =====================================================
+// QUICK CATEGORIES
+// =====================================================
 
-function renderServices() {
+function renderQuickCategories() {
+    if (!quickCategories) {
+        return;
+    }
+
+    const uniqueCategories = [
+        ...new Map(
+            allServices
+                .filter(
+                    (service) =>
+                        service.category
+                )
+                .map(
+                    (service) => [
+                        service.category,
+                        service
+                    ]
+                )
+        ).values()
+    ].slice(0, 8);
+
+    quickCategories.innerHTML =
+        uniqueCategories
+            .map(
+                (
+                    service,
+                    index
+                ) => `
+                    <button
+                        class="
+                            quick-category
+                            ${getGradient(index)}
+                        "
+                        data-category="${
+                            escapeHtml(
+                                service.category
+                            )
+                        }"
+                        type="button"
+                    >
+                        <i>
+                            ${getServiceIcon(
+                                service
+                            )}
+                        </i>
+
+                        <span>
+                            ${escapeHtml(
+                                service.category
+                            )}
+                        </span>
+
+                        <small>
+                            Explore →
+                        </small>
+                    </button>
+                `
+            )
+            .join("");
+
+    quickCategories
+        .querySelectorAll(
+            ".quick-category"
+        )
+        .forEach((button) => {
+            button.addEventListener(
+                "click",
+                () => {
+                    activeCategory =
+                        button.dataset
+                            .category ||
+                        "All";
+
+                    renderFilters();
+                    renderServices();
+
+                    document
+                        .getElementById(
+                            "servicesSection"
+                        )
+                        ?.scrollIntoView({
+                            behavior:
+                                "smooth"
+                        });
+                }
+            );
+        });
+}
+
+// =====================================================
+// CATEGORY FILTERS
+// =====================================================
+
+function renderFilters() {
+    if (!categoryFilters) {
+        return;
+    }
+
+    const categories = [
+        "All",
+        ...new Set(
+            allServices
+                .map(
+                    (service) =>
+                        safeText(
+                            service.category
+                        )
+                )
+                .filter(Boolean)
+        )
+    ];
+
+    categoryFilters.innerHTML = "";
+
+    categories.forEach(
+        (category) => {
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+            button.type = "button";
+
+            button.className =
+                `category-filter${
+                    category ===
+                    activeCategory
+                        ? " active"
+                        : ""
+                }`;
+
+            button.textContent =
+                category;
+
+            button.addEventListener(
+                "click",
+                () => {
+                    activeCategory =
+                        category;
+
+                    renderFilters();
+                    renderServices();
+                }
+            );
+
+            categoryFilters
+                .appendChild(button);
+        }
+    );
+}
+
+// =====================================================
+// FILTERED SERVICES
+// =====================================================
+
+function getFilteredServices() {
+    const query = safeText(
+        serviceSearch?.value
+    )
+        .trim()
+        .toLowerCase();
+
+    return allServices.filter(
+        (service) => {
+            const categoryMatches =
+                activeCategory === "All" ||
+                safeText(
+                    service.category
+                ) === activeCategory;
+
+            const searchableText = `
+                ${service.name || ""}
+                ${service.description || ""}
+                ${service.category || ""}
+            `.toLowerCase();
+
+            return (
+                categoryMatches &&
+                searchableText.includes(
+                    query
+                )
+            );
+        }
+    );
+}
+
+// =====================================================
+// RENDER SERVICES
+// =====================================================
+
+function renderServices(
+    customServices = null
+) {
     if (
         !servicesContainer ||
-        !messageBox ||
-        !searchInput
+        !serviceMessage
     ) {
         return;
     }
 
-    const query = searchInput.value
-        .trim()
-        .toLowerCase();
-
-    const filtered = allServices.filter((service) => {
-        const matchesCategory =
-            activeCategory === "All" ||
-            service.category === activeCategory;
-
-        const searchableText = `
-            ${service.name || ""}
-            ${service.description || ""}
-            ${service.category || ""}
-        `.toLowerCase();
-
-        return (
-            matchesCategory &&
-            searchableText.includes(query)
-        );
-    });
+    const services =
+        Array.isArray(customServices)
+            ? customServices
+            : getFilteredServices();
 
     servicesContainer.innerHTML = "";
 
-    if (!filtered.length) {
-        messageBox.className =
+    if (!services.length) {
+        serviceMessage.className =
             "page-message service-status empty-state";
 
-        messageBox.innerHTML = `
-            <strong>No matching services found.</strong>
-            <span>Try another search or category.</span>
+        serviceMessage.innerHTML = `
+            <strong>
+                No matching services found.
+            </strong>
+
+            <span>
+                Try another search or category.
+            </span>
         `;
 
         return;
     }
 
-    messageBox.textContent =
-        `${filtered.length} service${
-            filtered.length === 1 ? "" : "s"
-        } available`;
-
-    messageBox.className =
+    serviceMessage.className =
         "page-message service-status success-state";
 
-    filtered.forEach((service, index) => {
-        servicesContainer.appendChild(
-            createServiceCard(service, index)
-        );
-    });
+    serviceMessage.textContent =
+        `${services.length} service${
+            services.length === 1
+                ? ""
+                : "s"
+        } available`;
+
+    services.forEach(
+        (service, index) => {
+            servicesContainer.appendChild(
+                createServiceCard(
+                    service,
+                    index
+                )
+            );
+        }
+    );
 
     requestAnimationFrame(() => {
-        document
+        servicesContainer
             .querySelectorAll(
                 ".dashboard-service-card"
             )
             .forEach((card) => {
-                card.classList.add("revealed");
+                card.classList.add(
+                    "revealed"
+                );
             });
     });
 }
 
-// ===================================
-// Recent services
-// ===================================
+// =====================================================
+// RECENT SERVICES
+// =====================================================
 
-function renderRecent() {
-    const section =
-        document.getElementById("recentSection");
-
-    const container =
-        document.getElementById("recentServices");
-
-    if (!section || !container) {
+function renderRecentServices() {
+    if (
+        !recentSection ||
+        !recentServicesContainer
+    ) {
         return;
     }
 
-    const items = recent
-        .map((id) =>
-            allServices.find(
-                (service) =>
-                    serviceId(service) === id
+    const services =
+        recentServices
+            .map((id) =>
+                allServices.find(
+                    (service) =>
+                        getServiceId(
+                            service
+                        ) ===
+                        String(id)
+                )
             )
-        )
-        .filter(Boolean);
+            .filter(Boolean);
 
-    section.hidden = !items.length;
-    container.innerHTML = "";
+    recentSection.hidden =
+        services.length === 0;
 
-    items.forEach((service, index) => {
-        container.appendChild(
-            createServiceCard(
-                service,
-                index,
-                true
-            )
-        );
-    });
+    recentServicesContainer.innerHTML =
+        "";
+
+    services.forEach(
+        (service, index) => {
+            recentServicesContainer
+                .appendChild(
+                    createServiceCard(
+                        service,
+                        index,
+                        true
+                    )
+                );
+        }
+    );
 }
 
-// ===================================
-// Load services
-// ===================================
+// =====================================================
+// LOAD SERVICES
+// =====================================================
 
 async function loadServices() {
-    if (!messageBox || !servicesContainer) {
+    if (
+        !servicesContainer ||
+        !serviceMessage
+    ) {
         return;
     }
 
-    messageBox.className =
+    serviceMessage.className =
         "page-message service-status loading-state";
 
-    messageBox.textContent =
+    serviceMessage.textContent =
         "Loading available services...";
 
     servicesContainer.innerHTML =
@@ -558,38 +1079,32 @@ async function loadServices() {
         ).join("");
 
     try {
-        const response = await fetch(
-            `${API}/services`,
-            {
-                headers: {
-                    Accept: "application/json"
-                },
-                cache: "no-store"
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error(
-                `Service request failed (${response.status})`
+        const payload =
+            await apiGet(
+                "/services"
             );
-        }
 
-        const payload = await response.json();
-
-        allServices = Array.isArray(payload)
-            ? payload
-            : Array.isArray(payload.services)
-                ? payload.services
-                : [];
+        allServices =
+            Array.isArray(payload)
+                ? payload
+                : Array.isArray(
+                    payload.services
+                )
+                    ? payload.services
+                    : [];
 
         if (!allServices.length) {
-            servicesContainer.innerHTML = "";
+            servicesContainer.innerHTML =
+                "";
 
-            messageBox.className =
+            serviceMessage.className =
                 "page-message service-status empty-state";
 
-            messageBox.innerHTML = `
-                <strong>No services available.</strong>
+            serviceMessage.innerHTML = `
+                <strong>
+                    No services available.
+                </strong>
+
                 <span>
                     Add services from admin management.
                 </span>
@@ -601,22 +1116,27 @@ async function loadServices() {
         renderQuickCategories();
         renderFilters();
         renderServices();
-        renderRecent();
+        renderRecentServices();
     } catch (error) {
-        console.error(error);
+        console.error(
+            "Unable to load services:",
+            error
+        );
 
         servicesContainer.innerHTML = "";
 
-        messageBox.className =
+        serviceMessage.className =
             "page-message service-status error-state";
 
-        messageBox.innerHTML = `
+        serviceMessage.innerHTML = `
             <strong>
                 We could not load services.
             </strong>
 
             <span>
-                ${safeText(error.message)}
+                ${escapeHtml(
+                    error.message
+                )}
             </span>
 
             <button
@@ -628,7 +1148,9 @@ async function loadServices() {
         `;
 
         document
-            .getElementById("retryServices")
+            .getElementById(
+                "retryServices"
+            )
             ?.addEventListener(
                 "click",
                 loadServices
@@ -636,378 +1158,261 @@ async function loadServices() {
     }
 }
 
-// ===================================
-// Search
-// ===================================
+// =====================================================
+// SEARCH AND FAVOURITES
+// =====================================================
 
-searchInput?.addEventListener(
-    "input",
-    renderServices
-);
-
-document
-    .getElementById("heroSearchBtn")
-    ?.addEventListener("click", () => {
-        if (!searchInput || !heroSearch) {
-            return;
+function initialiseSearch() {
+    serviceSearch?.addEventListener(
+        "input",
+        () => {
+            renderServices();
         }
-
-        searchInput.value = heroSearch.value;
-
-        renderServices();
-
-        document
-            .getElementById("servicesSection")
-            ?.scrollIntoView({
-                behavior: "smooth"
-            });
-    });
-
-heroSearch?.addEventListener(
-    "keydown",
-    (event) => {
-        if (event.key === "Enter") {
-            document
-                .getElementById("heroSearchBtn")
-                ?.click();
-        }
-    }
-);
-
-// ===================================
-// Notification panel
-// ===================================
-
-const notificationBtn =
-    document.getElementById("notificationBtn");
-
-const notificationPanel =
-    document.getElementById("notificationPanel");
-
-notificationBtn?.addEventListener(
-    "click",
-    (event) => {
-        event.stopPropagation();
-
-        notificationPanel
-            ?.classList
-            .toggle("open");
-    }
-);
-
-document.addEventListener("click", () => {
-    notificationPanel
-        ?.classList
-        .remove("open");
-});
-
-notificationPanel?.addEventListener(
-    "click",
-    (event) => {
-        event.stopPropagation();
-    }
-);
-
-// ===================================
-// Theme
-// ===================================
-
-const themeToggle =
-    document.getElementById("themeToggle");
-
-function applyTheme(theme) {
-    document.documentElement.dataset.theme =
-        theme;
-
-    if (themeToggle) {
-        themeToggle.textContent =
-            theme === "dark" ? "☀" : "☾";
-    }
-
-    localStorage.setItem(
-        "homeserveTheme",
-        theme
     );
-}
 
-applyTheme(
-    localStorage.getItem("homeserveTheme") ||
-    "light"
-);
+    heroSearchBtn?.addEventListener(
+        "click",
+        () => {
+            if (
+                !serviceSearch ||
+                !heroSearch
+            ) {
+                return;
+            }
 
-themeToggle?.addEventListener(
-    "click",
-    () => {
-        const currentTheme =
-            document.documentElement.dataset.theme;
+            serviceSearch.value =
+                heroSearch.value;
 
-        applyTheme(
-            currentTheme === "dark"
-                ? "light"
-                : "dark"
-        );
-    }
-);
+            renderServices();
 
-// ===================================
-// Number counters
-// Fake rating counter removed
-// ===================================
+            document
+                .getElementById(
+                    "servicesSection"
+                )
+                ?.scrollIntoView({
+                    behavior: "smooth"
+                });
+        }
+    );
 
-const counterObserver =
-    new IntersectionObserver(
-        (entries) => {
-            entries.forEach((entry) => {
-                if (!entry.isIntersecting) {
-                    return;
+    heroSearch?.addEventListener(
+        "keydown",
+        (event) => {
+            if (
+                event.key === "Enter"
+            ) {
+                event.preventDefault();
+
+                heroSearchBtn?.click();
+            }
+        }
+    );
+
+    showFavoritesAction
+        ?.addEventListener(
+            "click",
+            () => {
+                activeCategory =
+                    "All";
+
+                renderFilters();
+
+                if (serviceSearch) {
+                    serviceSearch.value =
+                        "";
                 }
 
-                const element = entry.target;
-                const target = Number(
-                    element.dataset.count
-                );
-
-                if (!Number.isFinite(target)) {
-                    return;
-                }
-
-                let current = 0;
-
-                const increase =
-                    Math.max(
-                        1,
-                        Math.ceil(target / 55)
+                const savedServices =
+                    allServices.filter(
+                        (service) =>
+                            favorites.includes(
+                                getServiceId(
+                                    service
+                                )
+                            )
                     );
 
-                function updateCounter() {
-                    current += increase;
-
-                    if (current > target) {
-                        current = target;
-                    }
-
-                    element.textContent =
-                        target >= 1000
-                            ? `${current.toLocaleString(
-                                "en-IN"
-                            )}+`
-                            : current.toLocaleString(
-                                "en-IN"
-                            );
-
-                    if (current < target) {
-                        requestAnimationFrame(
-                            updateCounter
-                        );
-                    }
-                }
-
-                updateCounter();
-
-                counterObserver.unobserve(
-                    element
+                renderServices(
+                    savedServices
                 );
-            });
-        },
-        {
-            threshold: 0.5
-        }
-    );
 
-document
-    .querySelectorAll("[data-count]")
-    .forEach((element) => {
-        counterObserver.observe(element);
-    });
-
-// ===================================
-// Booking helpers
-// ===================================
-
-function formatCurrency(value) {
-    return `₹${Number(
-        value || 0
-    ).toLocaleString("en-IN")}`;
+                document
+                    .getElementById(
+                        "servicesSection"
+                    )
+                    ?.scrollIntoView({
+                        behavior:
+                            "smooth"
+                    });
+            }
+        );
 }
 
-function formatBookingDate(value) {
-    if (!value) {
-        return "Date not available";
-    }
+// =====================================================
+// BOOKING OVERVIEW
+// =====================================================
 
-    return new Intl.DateTimeFormat(
-        "en-IN",
-        {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            year: "numeric"
-        }
-    ).format(new Date(value));
-}
-
-function statusClass(status) {
-    return safeText(status)
-        .toLowerCase()
-        .replace(/\s+/g, "-");
-}
-
-// ===================================
-// Booking overview
-// ===================================
-
-function renderBookingOverview(bookings) {
+function renderBookingOverview(
+    bookings
+) {
     const items =
         Array.isArray(bookings)
             ? bookings
             : [];
 
-    const active = items.filter(
-        (booking) =>
-            ![
-                "Completed",
-                "Cancelled"
-            ].includes(booking.status)
-    );
-
-    const completed = items.filter(
-        (booking) =>
-            booking.status === "Completed"
-    );
-
-    const totalSpent = completed.reduce(
-        (sum, booking) =>
-            sum +
-            Number(
-                booking.pricing?.total || 0
-            ),
-        0
-    );
-
-    const totalBookings =
-        document.getElementById(
-            "metricTotalBookings"
-        );
-
     const activeBookings =
-        document.getElementById(
-            "metricActiveBookings"
+        items.filter(
+            (booking) =>
+                ![
+                    "Completed",
+                    "Cancelled"
+                ].includes(
+                    booking.status
+                )
         );
 
     const completedBookings =
-        document.getElementById(
-            "metricCompletedBookings"
+        items.filter(
+            (booking) =>
+                booking.status ===
+                "Completed"
         );
 
-    const totalSpentElement =
-        document.getElementById(
-            "metricTotalSpent"
+    const totalSpent =
+        completedBookings.reduce(
+            (
+                total,
+                booking
+            ) =>
+                total +
+                Number(
+                    booking.pricing
+                        ?.total || 0
+                ),
+            0
         );
 
-    if (totalBookings) {
-        totalBookings.textContent =
+    if (metricTotalBookings) {
+        metricTotalBookings.textContent =
             items.length;
     }
 
-    if (activeBookings) {
-        activeBookings.textContent =
-            active.length;
+    if (metricActiveBookings) {
+        metricActiveBookings.textContent =
+            activeBookings.length;
     }
 
-    if (completedBookings) {
-        completedBookings.textContent =
-            completed.length;
+    if (
+        metricCompletedBookings
+    ) {
+        metricCompletedBookings
+            .textContent =
+            completedBookings.length;
     }
 
-    if (totalSpentElement) {
-        totalSpentElement.textContent =
+    if (metricTotalSpent) {
+        metricTotalSpent.textContent =
             formatCurrency(totalSpent);
+    }
+
+    if (!upcomingBookingContent) {
+        return;
     }
 
     const now = new Date();
 
-    const next = active
-        .filter(
-            (booking) =>
-                new Date(
-                    booking.bookingDate
-                ) >= now
-        )
-        .sort(
-            (first, second) =>
-                new Date(
-                    first.bookingDate
-                ) -
-                new Date(
-                    second.bookingDate
-                )
-        )[0];
+    const nextBooking =
+        activeBookings
+            .filter((booking) => {
+                const date =
+                    new Date(
+                        booking.bookingDate
+                    );
 
-    const box =
-        document.getElementById(
-            "upcomingBookingContent"
-        );
+                return (
+                    !Number.isNaN(
+                        date.getTime()
+                    ) &&
+                    date >= now
+                );
+            })
+            .sort(
+                (
+                    first,
+                    second
+                ) =>
+                    new Date(
+                        first.bookingDate
+                    ) -
+                    new Date(
+                        second.bookingDate
+                    )
+            )[0] ||
+        activeBookings[0];
 
-    if (!box) {
+    if (!nextBooking) {
+        upcomingBookingContent
+            .innerHTML = `
+                <div class="no-upcoming-booking">
+                    <i>⌂</i>
+
+                    <h4>
+                        No upcoming booking
+                    </h4>
+
+                    <p>
+                        Your next home-service request
+                        will appear here.
+                    </p>
+
+                    <a
+                        class="btn btn-primary"
+                        href="#servicesSection"
+                    >
+                        Book now
+                    </a>
+                </div>
+            `;
+
         return;
     }
 
-    if (!next) {
-        box.innerHTML = `
-            <div class="no-upcoming-booking">
-                <i>⌂</i>
+    const providerName =
+        nextBooking.provider?.name ||
+        "Provider will be assigned soon";
 
-                <h4>No upcoming booking</h4>
-
-                <p>
-                    Your next home-service request
-                    will appear here.
-                </p>
-
-                <a
-                    class="btn btn-primary"
-                    href="#servicesSection"
-                >
-                    Book now
-                </a>
-            </div>
-        `;
-
-        return;
-    }
-
-    const name = safeText(
-        next.service?.name || "Home Service"
-    );
-
-    const provider = safeText(
-        next.provider?.name ||
-        "Provider will be assigned soon"
-    );
-
-    box.innerHTML = `
+    upcomingBookingContent.innerHTML = `
         <div class="upcoming-service-row">
             <div class="upcoming-service-icon">
-                ${getIcon(next.service || {})}
+                ${getServiceIcon(
+                    nextBooking.service || {}
+                )}
             </div>
 
             <div>
                 <span>
-                    ${safeText(
-                        next.bookingCode ||
+                    ${escapeHtml(
+                        nextBooking.bookingCode ||
                         "HomeServe booking"
                     )}
                 </span>
 
-                <h4>${name}</h4>
+                <h4>
+                    ${escapeHtml(
+                        nextBooking.service
+                            ?.name ||
+                        "Home Service"
+                    )}
+                </h4>
 
                 <p>
                     ${formatBookingDate(
-                        next.bookingDate
+                        nextBooking.bookingDate
                     )}
                     ·
-                    ${safeText(
-                        next.timeSlot || ""
+                    ${escapeHtml(
+                        nextBooking.timeSlot ||
+                        ""
                     )}
                 </p>
             </div>
@@ -1015,27 +1420,40 @@ function renderBookingOverview(bookings) {
             <b
                 class="
                     booking-status-pill
-                    ${statusClass(next.status)}
+                    ${statusClass(
+                        nextBooking.status
+                    )}
                 "
             >
-                ${safeText(
-                    next.status || "Pending"
+                ${escapeHtml(
+                    nextBooking.status ||
+                    "Pending"
                 )}
             </b>
         </div>
 
         <div class="upcoming-details">
             <div>
-                <small>Professional</small>
-                <strong>${provider}</strong>
+                <small>
+                    Professional
+                </small>
+
+                <strong>
+                    ${escapeHtml(
+                        providerName
+                    )}
+                </strong>
             </div>
 
             <div>
-                <small>Service total</small>
+                <small>
+                    Service total
+                </small>
 
                 <strong>
                     ${formatCurrency(
-                        next.pricing?.total
+                        nextBooking.pricing
+                            ?.total
                     )}
                 </strong>
             </div>
@@ -1050,7 +1468,9 @@ function renderBookingOverview(bookings) {
                         "Accepted",
                         "On the Way",
                         "Completed"
-                    ].includes(next.status)
+                    ].includes(
+                        nextBooking.status
+                    )
                         ? "active"
                         : ""
                 }"
@@ -1061,7 +1481,9 @@ function renderBookingOverview(bookings) {
                     [
                         "On the Way",
                         "Completed"
-                    ].includes(next.status)
+                    ].includes(
+                        nextBooking.status
+                    )
                         ? "active"
                         : ""
                 }"
@@ -1069,7 +1491,8 @@ function renderBookingOverview(bookings) {
 
             <span
                 class="${
-                    next.status === "Completed"
+                    nextBooking.status ===
+                    "Completed"
                         ? "active"
                         : ""
                 }"
@@ -1085,332 +1508,433 @@ function renderBookingOverview(bookings) {
     `;
 }
 
-// ===================================
-// Load booking overview
-// ===================================
-
 async function loadBookingOverview() {
-    const message =
-        document.getElementById(
-            "dashboardBookingMessage"
-        );
-
     try {
-        const response = await fetch(
-            `${API}/bookings`,
-            {
-                headers: {
-                    Authorization: token,
-                    Accept: "application/json"
-                },
-                cache: "no-store"
-            }
+        const bookings =
+            await apiGet(
+                "/bookings",
+                true
+            );
+
+        renderBookingOverview(
+            bookings
         );
 
-        const payload =
-            await response.json();
-
-        if (!response.ok) {
-            throw new Error(
-                payload.message ||
-                "Unable to load booking overview"
-            );
-        }
-
-        renderBookingOverview(payload);
-
-        if (message) {
-            message.textContent = "";
+        if (
+            dashboardBookingMessage
+        ) {
+            dashboardBookingMessage
+                .textContent = "";
         }
     } catch (error) {
-        console.error(error);
+        console.error(
+            "Unable to load bookings:",
+            error
+        );
 
         renderBookingOverview([]);
 
-        if (message) {
-            message.textContent =
+        if (
+            dashboardBookingMessage
+        ) {
+            dashboardBookingMessage
+                .textContent =
                 "Booking overview could not be loaded. Your services are still available below.";
         }
     }
 }
 
-// ===================================
-// Show favorites
-// ===================================
-
-document
-    .getElementById("showFavoritesAction")
-    ?.addEventListener("click", () => {
-        const favoriteSet =
-            new Set(favorites);
-
-        activeCategory = "All";
-
-        renderFilters();
-
-        if (searchInput) {
-            searchInput.value = "";
-        }
-
-        servicesContainer.innerHTML = "";
-
-        const saved = allServices.filter(
-            (service) =>
-                favoriteSet.has(
-                    serviceId(service)
-                )
-        );
-
-        if (!saved.length) {
-            messageBox.className =
-                "page-message service-status empty-state";
-
-            messageBox.innerHTML = `
-                <strong>
-                    No saved services yet.
-                </strong>
-
-                <span>
-                    Tap the heart icon on a
-                    service card to save it.
-                </span>
-            `;
-        } else {
-            messageBox.className =
-                "page-message service-status success-state";
-
-            messageBox.textContent =
-                `${saved.length} saved service${
-                    saved.length === 1
-                        ? ""
-                        : "s"
-                }`;
-
-            saved.forEach(
-                (service, index) => {
-                    servicesContainer.appendChild(
-                        createServiceCard(
-                            service,
-                            index
-                        )
-                    );
-                }
-            );
-        }
-
-        document
-            .getElementById("servicesSection")
-            ?.scrollIntoView({
-                behavior: "smooth"
-            });
-    });
-
-// ===================================
-// Initial loading
-// ===================================
-function escapeHtml(value) {
-    return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
+// =====================================================
+// CUSTOMER REVIEWS
+// =====================================================
 
 function renderStars(rating) {
-    const safeRating = Math.max(
-        0,
-        Math.min(5, Number(rating) || 0)
-    );
+    const roundedRating =
+        Math.max(
+            0,
+            Math.min(
+                5,
+                Math.round(
+                    Number(rating) || 0
+                )
+            )
+        );
 
-    return `${"★".repeat(safeRating)}${"☆".repeat(
-        5 - safeRating
-    )}`;
+    return (
+        "★".repeat(roundedRating) +
+        "☆".repeat(
+            5 - roundedRating
+        )
+    );
 }
 
 async function loadCustomerReviews() {
-    const averageElement =
-        document.getElementById(
-            "dashboardAverageRating"
-        );
-
-    const countElement =
-        document.getElementById(
-            "dashboardReviewCount"
-        );
-
-    const avatarStack =
-        document.getElementById(
-            "reviewAvatarStack"
-        );
-
-    const testimonialContainer =
-        document.getElementById(
-            "customerTestimonials"
-        );
-
     try {
-        const response = await fetch(
-            `${API}/reviews/public`,
-            {
-                headers: {
-                    Accept: "application/json"
-                },
-                cache: "no-store"
-            }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok || data.success === false) {
-            throw new Error(
-                data.message ||
-                "Unable to load customer reviews"
+        const data =
+            await apiGet(
+                "/reviews/public"
             );
-        }
 
-        const reviews = Array.isArray(data.reviews)
-            ? data.reviews
-            : [];
+        const reviews =
+            Array.isArray(
+                data.reviews
+            )
+                ? data.reviews
+                : [];
 
-        if (averageElement) {
-            averageElement.textContent =
-                data.count > 0
-                    ? `${Number(data.average).toFixed(
+        const reviewCount =
+            Number(data.count || 0);
+
+        const averageRating =
+            Number(data.average || 0);
+
+        if (
+            dashboardAverageRating
+        ) {
+            dashboardAverageRating
+                .textContent =
+                reviewCount > 0
+                    ? `${averageRating.toFixed(
                         1
                     )}/5 customer rating`
                     : "No customer ratings yet";
         }
 
-        if (countElement) {
-            countElement.textContent =
-                data.count > 0
-                    ? `${data.count} verified customer review${
-                        data.count === 1 ? "" : "s"
+        if (
+            dashboardReviewCount
+        ) {
+            dashboardReviewCount
+                .textContent =
+                reviewCount > 0
+                    ? `${reviewCount} verified customer review${
+                        reviewCount === 1
+                            ? ""
+                            : "s"
                     }`
                     : "Reviews from completed bookings";
         }
 
-        if (avatarStack) {
-            avatarStack.innerHTML = reviews
-                .slice(0, 3)
-                .map((review) => {
-                    const name =
-                        review.customer?.name ||
-                        "Customer";
+        if (reviewAvatarStack) {
+            reviewAvatarStack.innerHTML =
+                reviews
+                    .slice(0, 3)
+                    .map((review) => {
+                        const initial =
+                            safeText(
+                                review
+                                    .customer
+                                    ?.name ||
+                                "Customer"
+                            )
+                                .charAt(0)
+                                .toUpperCase();
 
-                    return `
-                        <i>
-                            ${escapeHtml(
-                                name
-                                    .charAt(0)
-                                    .toUpperCase()
-                            )}
-                        </i>
-                    `;
-                })
-                .join("");
+                        return `
+                            <i>
+                                ${escapeHtml(
+                                    initial
+                                )}
+                            </i>
+                        `;
+                    })
+                    .join("");
         }
 
-        if (!testimonialContainer) {
+        if (!customerTestimonials) {
             return;
         }
 
         if (!reviews.length) {
-            testimonialContainer.innerHTML = `
-                <article>
-                    <div>☆☆☆☆☆</div>
-
-                    <p>
-                        No customer reviews yet.
-                    </p>
-
-                    <footer>
-                        <b>HomeServe</b>
-                        <span>
-                            Reviews will appear after completed bookings.
-                        </span>
-                    </footer>
-                </article>
-            `;
-
-            return;
-        }
-
-        testimonialContainer.innerHTML = reviews
-            .slice(0, 6)
-            .map((review) => {
-                const customerName =
-                    review.customer?.name ||
-                    "Customer";
-
-                const serviceName =
-                    review.service?.name ||
-                    "Home service";
-
-                const comment =
-                    review.comment ||
-                    "Customer submitted a rating.";
-
-                return `
+            customerTestimonials
+                .innerHTML = `
                     <article>
                         <div>
-                            ${renderStars(
-                                review.rating
-                            )}
+                            ☆☆☆☆☆
                         </div>
 
                         <p>
-                            “${escapeHtml(comment)}”
+                            No customer reviews yet.
                         </p>
 
                         <footer>
-                            <b>
-                                ${escapeHtml(customerName)}
-                            </b>
+                            <b>HomeServe</b>
 
                             <span>
-                                ${escapeHtml(serviceName)}
+                                Reviews will appear after completed bookings.
                             </span>
                         </footer>
                     </article>
                 `;
-            })
-            .join("");
+
+            return;
+        }
+
+        customerTestimonials.innerHTML =
+            reviews
+                .slice(0, 6)
+                .map((review) => {
+                    const customer =
+                        review.customer
+                            ?.name ||
+                        "Customer";
+
+                    const service =
+                        review.service
+                            ?.name ||
+                        "Home service";
+
+                    const comment =
+                        review.comment ||
+                        "Customer submitted a rating.";
+
+                    return `
+                        <article>
+                            <div>
+                                ${renderStars(
+                                    review.rating
+                                )}
+                            </div>
+
+                            <p>
+                                “${escapeHtml(
+                                    comment
+                                )}”
+                            </p>
+
+                            <footer>
+                                <b>
+                                    ${escapeHtml(
+                                        customer
+                                    )}
+                                </b>
+
+                                <span>
+                                    ${escapeHtml(
+                                        service
+                                    )}
+                                </span>
+                            </footer>
+                        </article>
+                    `;
+                })
+                .join("");
     } catch (error) {
         console.error(
             "Unable to load customer reviews:",
             error
         );
 
-        if (averageElement) {
-            averageElement.textContent =
+        if (
+            dashboardAverageRating
+        ) {
+            dashboardAverageRating
+                .textContent =
                 "No customer ratings yet";
         }
 
-        if (countElement) {
-            countElement.textContent =
+        if (
+            dashboardReviewCount
+        ) {
+            dashboardReviewCount
+                .textContent =
                 "Reviews from completed bookings";
         }
 
-        if (testimonialContainer) {
-            testimonialContainer.innerHTML = `
-                <article>
-                    <p>
-                        Customer reviews could not be loaded.
-                    </p>
-                </article>
-            `;
+        if (customerTestimonials) {
+            customerTestimonials
+                .innerHTML = `
+                    <article>
+                        <p>
+                            Customer reviews could not be loaded.
+                        </p>
+                    </article>
+                `;
         }
     }
 }
-loadServices();
-loadBookingOverview();
-loadCustomerReviews();
 
-if (window.socket) {
-    window.socket.on(
-        "review-updated",
-        loadCustomerReviews
+// =====================================================
+// NUMBER COUNTERS
+// =====================================================
+
+function initialiseCounters() {
+    const counters =
+        document.querySelectorAll(
+            "[data-count]"
+        );
+
+    if (
+        !(
+            "IntersectionObserver" in
+            window
+        )
+    ) {
+        counters.forEach(
+            (element) => {
+                const target =
+                    Number(
+                        element.dataset
+                            .count || 0
+                    );
+
+                element.textContent =
+                    target.toLocaleString(
+                        "en-IN"
+                    );
+            }
+        );
+
+        return;
+    }
+
+    const observer =
+        new IntersectionObserver(
+            (entries) => {
+                entries.forEach(
+                    (entry) => {
+                        if (
+                            !entry.isIntersecting
+                        ) {
+                            return;
+                        }
+
+                        const element =
+                            entry.target;
+
+                        const target =
+                            Number(
+                                element
+                                    .dataset
+                                    .count || 0
+                            );
+
+                        let current = 0;
+
+                        const step =
+                            Math.max(
+                                1,
+                                Math.ceil(
+                                    target /
+                                    55
+                                )
+                            );
+
+                        function update() {
+                            current =
+                                Math.min(
+                                    target,
+                                    current +
+                                    step
+                                );
+
+                            element
+                                .textContent =
+                                target >= 1000
+                                    ? `${current.toLocaleString(
+                                        "en-IN"
+                                    )}+`
+                                    : current.toLocaleString(
+                                        "en-IN"
+                                    );
+
+                            if (
+                                current <
+                                target
+                            ) {
+                                requestAnimationFrame(
+                                    update
+                                );
+                            }
+                        }
+
+                        update();
+
+                        observer.unobserve(
+                            element
+                        );
+                    }
+                );
+            },
+            {
+                threshold: 0.5
+            }
+        );
+
+    counters.forEach(
+        (element) => {
+            observer.observe(element);
+        }
     );
+}
+
+// =====================================================
+// SOCKET.IO UPDATES
+// =====================================================
+
+function initialiseSocketUpdates() {
+    if (!window.io) {
+        return;
+    }
+
+    try {
+        const socket =
+            window.socket ||
+            window.io();
+
+        socket.on(
+            "review-updated",
+            () => {
+                loadServices();
+                loadCustomerReviews();
+            }
+        );
+
+        socket.on(
+            "booking-updated",
+            () => {
+                loadBookingOverview();
+            }
+        );
+    } catch (error) {
+        console.warn(
+            "Real-time updates are unavailable:",
+            error
+        );
+    }
+}
+
+// =====================================================
+// INITIALISE DASHBOARD
+// =====================================================
+
+async function initialiseDashboard() {
+    initialiseCustomer();
+
+    initialiseNotifications();
+
+    initialiseTheme();
+
+    initialiseSearch();
+
+    initialiseCounters();
+
+    await Promise.allSettled([
+        loadServices(),
+        loadBookingOverview(),
+        loadCustomerReviews()
+    ]);
+
+    initialiseSocketUpdates();
+}
+
+if (
+    document.readyState ===
+    "loading"
+) {
+    document.addEventListener(
+        "DOMContentLoaded",
+        initialiseDashboard
+    );
+} else {
+    initialiseDashboard();
 }

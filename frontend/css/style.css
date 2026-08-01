@@ -274,3 +274,31 @@ body{background:radial-gradient(circle at 8% 0%,rgba(37,99,235,.1),transparent 2
 @media(max-width:780px){.admin-sidebar{overflow:hidden}.admin-top-logout{display:inline-flex;align-items:center}.admin-nav{padding-bottom:10px}}
 @media(max-width:620px){.admin-topbar{align-items:flex-start;flex-wrap:wrap}.admin-top-actions{width:100%;justify-content:flex-end}.admin-form-grid,.coupon-guide-grid{grid-template-columns:1fr}.admin-form-grid label:nth-child(2){grid-column:auto}.admin-form-grid>button{width:100%;justify-self:stretch}.admin-card{padding:18px}.section-title-row{align-items:flex-start}}
 @media(max-width:420px){.admin-top-actions{gap:8px}.admin-top-logout{padding:0 12px}.admin-top-actions .btn-primary{display:none}}
+.notification-wrap {
+    position: relative;
+}
+
+.notification-panel {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    z-index: 5000;
+    width: min(360px, calc(100vw - 30px));
+    max-height: 430px;
+    overflow-y: auto;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease,
+        visibility 0.2s ease;
+}
+
+.notification-panel.open {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
