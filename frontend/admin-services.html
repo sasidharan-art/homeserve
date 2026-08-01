@@ -1,3 +1,611 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Manage Services | HomeServe</title><link rel="stylesheet" href="css/style.css"></head><body class="shell">
-<header class="topbar"><div class="topbar-inner"><a class="brand" href="admin.html"><span class="brand-mark">H</span><span>Service Manager</span></a><div class="header-actions"><a class="btn btn-secondary" href="admin.html">Dashboard</a><button class="btn btn-danger" id="logoutBtn">Logout</button></div></div></header>
-<main class="main"><section class="page-hero"><span class="eyebrow">Admin tools</span><h1>Manage service catalogue</h1><p>Add new services or update the information, category and price displayed to customers.</p></section><div class="grid" style="grid-template-columns:minmax(300px,.75fr) minmax(420px,1.25fr);align-items:start"><section class="panel"><h2 id="formTitle" style="font-family:Manrope,sans-serif;margin-bottom:22px">Add New Service</h2><form id="serviceForm"><input id="serviceId" type="hidden"><div class="form-group"><label for="name">Service name</label><input id="name" required></div><div class="form-group"><label for="description">Description</label><textarea id="description" rows="4" required></textarea></div><div class="form-row"><div class="form-group"><label for="category">Category</label><input id="category" required></div><div class="form-group"><label for="price">Price (₹)</label><input id="price" type="number" min="0" step="0.01" required></div></div><button id="saveBtn" type="submit">Add Service</button><button id="cancelEditBtn" type="button" class="btn btn-secondary" hidden style="width:100%;margin-top:10px">Cancel edit</button></form></section><section><div id="serviceMessage" class="page-message"></div><div id="serviceList"></div></section></div></main><footer class="footer">© 2026 HomeServe Administration</footer><script src="js/runtime-v80.js?v=8000"></script><script src="js/admin-services.js"></script><script src="js/ui-effects.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>Manage Services | HomeServe</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+    <style>
+        .service-admin-page {
+            min-height: 100vh;
+            background:
+                linear-gradient(
+                    180deg,
+                    #f4f7fb 0%,
+                    #eef3f9 100%
+                );
+        }
+
+        .service-admin-main {
+            width: min(1400px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 42px 0 70px;
+        }
+
+        .service-admin-heading {
+            margin-bottom: 28px;
+        }
+
+        .service-admin-heading .eyebrow {
+            display: inline-block;
+            margin-bottom: 8px;
+            color: #2563eb;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .service-admin-heading h1 {
+            margin: 0 0 8px;
+            color: #172033;
+            font-size: clamp(30px, 4vw, 44px);
+            line-height: 1.1;
+        }
+
+        .service-admin-heading p {
+            margin: 0;
+            color: #64748b;
+            font-size: 16px;
+        }
+
+        .service-form-panel,
+        .service-list-panel {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 22px;
+            box-shadow:
+                0 16px 40px rgba(15, 23, 42, 0.08);
+        }
+
+        .service-form-panel {
+            margin-bottom: 30px;
+            padding: 28px;
+        }
+
+        .service-panel-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .service-panel-heading h2 {
+            margin: 0;
+            color: #1d4ed8;
+            font-size: 24px;
+        }
+
+        .service-panel-heading p {
+            margin: 6px 0 0;
+            color: #64748b;
+        }
+
+        .service-form-grid {
+            display: grid;
+            grid-template-columns:
+                minmax(0, 1fr)
+                minmax(0, 1fr)
+                minmax(0, 0.7fr);
+            gap: 18px;
+            align-items: end;
+        }
+
+        .service-form-grid .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .service-form-grid .description-field {
+            grid-column: span 2;
+        }
+
+        .service-form-grid .button-field {
+            display: flex;
+            align-items: end;
+        }
+
+        .service-form-grid label {
+            display: block;
+            margin-bottom: 8px;
+            color: #334155;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .service-form-grid input,
+        .service-form-grid textarea {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 13px 14px;
+            color: #0f172a;
+            font: inherit;
+            outline: none;
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+        .service-form-grid input {
+            min-height: 50px;
+        }
+
+        .service-form-grid textarea {
+            min-height: 104px;
+            resize: vertical;
+        }
+
+        .service-form-grid input:focus,
+        .service-form-grid textarea:focus {
+            border-color: #2563eb;
+            box-shadow:
+                0 0 0 4px rgba(37, 99, 235, 0.12);
+        }
+
+        .service-form-actions {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .service-form-actions button {
+            min-height: 50px;
+        }
+
+        .service-form-actions #saveBtn {
+            flex: 1;
+        }
+
+        .service-list-panel {
+            padding: 26px;
+        }
+
+        .service-list-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 22px;
+        }
+
+        .service-list-toolbar h2 {
+            margin: 0;
+            color: #172033;
+            font-size: 26px;
+        }
+
+        .service-list-toolbar p {
+            margin: 6px 0 0;
+            color: #64748b;
+        }
+
+        .service-search-wrap {
+            position: relative;
+            width: min(360px, 100%);
+        }
+
+        .service-search-wrap span {
+            position: absolute;
+            top: 50%;
+            left: 14px;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+        .service-search-wrap input {
+            width: 100%;
+            min-height: 46px;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 0 14px 0 40px;
+            font: inherit;
+            outline: none;
+        }
+
+        .service-search-wrap input:focus {
+            border-color: #2563eb;
+            box-shadow:
+                0 0 0 4px rgba(37, 99, 235, 0.12);
+        }
+
+        #serviceMessage {
+            margin-bottom: 18px;
+        }
+
+        #serviceList {
+            display: grid;
+            grid-template-columns:
+                repeat(3, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .admin-service-card {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            background: #ffffff;
+            box-shadow:
+                0 10px 28px rgba(15, 23, 42, 0.07);
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+        .admin-service-card:hover {
+            transform: translateY(-3px);
+            box-shadow:
+                0 18px 40px rgba(15, 23, 42, 0.11);
+        }
+
+        .admin-service-card-top {
+            display: flex;
+            gap: 16px;
+            padding: 20px 20px 10px;
+        }
+
+        .admin-service-icon {
+            display: grid;
+            place-items: center;
+            flex: 0 0 78px;
+            width: 78px;
+            height: 78px;
+            border-radius: 18px;
+            background:
+                linear-gradient(
+                    145deg,
+                    #eff6ff,
+                    #dbeafe
+                );
+            font-size: 36px;
+        }
+
+        .admin-service-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .admin-service-card-content h3 {
+            margin: 0 0 6px;
+            color: #172033;
+            font-size: 20px;
+        }
+
+        .admin-service-category {
+            display: inline-block;
+            margin-bottom: 10px;
+            color: #2563eb;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .admin-service-price {
+            display: block;
+            margin-bottom: 10px;
+            color: #059669;
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .admin-service-description {
+            margin: 0;
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .admin-service-card-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: auto;
+            padding: 18px 20px 20px;
+        }
+
+        .admin-service-card-actions button {
+            min-height: 44px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        .admin-service-edit {
+            border: 1px solid #93c5fd;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .admin-service-edit:hover {
+            background: #dbeafe;
+        }
+
+        .admin-service-delete {
+            border: 1px solid #fca5a5;
+            background: #fff1f2;
+            color: #dc2626;
+        }
+
+        .admin-service-delete:hover {
+            background: #ffe4e6;
+        }
+
+        .service-empty-state {
+            grid-column: 1 / -1;
+            padding: 48px 20px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 16px;
+            text-align: center;
+            color: #64748b;
+            background: #f8fafc;
+        }
+
+        @media (max-width: 1050px) {
+            #serviceList {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+            }
+
+            .service-form-grid {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+            }
+
+            .service-form-grid .description-field {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .service-admin-main {
+                width: min(100% - 24px, 1400px);
+                padding-top: 24px;
+            }
+
+            .service-form-panel,
+            .service-list-panel {
+                padding: 20px;
+                border-radius: 16px;
+            }
+
+            .service-form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .service-form-grid .description-field,
+            .service-form-grid .full-width {
+                grid-column: auto;
+            }
+
+            .service-list-toolbar {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .service-search-wrap {
+                width: 100%;
+            }
+
+            #serviceList {
+                grid-template-columns: 1fr;
+            }
+
+            .admin-service-card-top {
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+
+<body class="shell service-admin-page">
+
+    <header class="topbar">
+        <div class="topbar-inner">
+
+            <a
+                class="brand"
+                href="admin.html"
+            >
+                <span class="brand-mark">H</span>
+                <span>Service Manager</span>
+            </a>
+
+            <div class="header-actions">
+                <a
+                    class="btn btn-secondary"
+                    href="admin.html"
+                >
+                    Dashboard
+                </a>
+
+                <button
+                    class="btn btn-danger"
+                    id="logoutBtn"
+                    type="button"
+                >
+                    Logout
+                </button>
+            </div>
+
+        </div>
+    </header>
+
+    <main class="service-admin-main">
+
+        <section class="service-admin-heading">
+            <span class="eyebrow">
+                Admin tools
+            </span>
+
+            <h1>
+                Manage services
+            </h1>
+
+            <p>
+                Add, update or remove services displayed to customers.
+            </p>
+        </section>
+
+        <section class="service-form-panel">
+
+            <div class="service-panel-heading">
+                <div>
+                    <h2 id="formTitle">
+                        Add New Service
+                    </h2>
+
+                    <p>
+                        Enter the service details below.
+                    </p>
+                </div>
+            </div>
+
+            <form id="serviceForm">
+
+                <input
+                    id="serviceId"
+                    type="hidden"
+                >
+
+                <div class="service-form-grid">
+
+                    <div class="form-group">
+                        <label for="name">
+                            Service name
+                        </label>
+
+                        <input
+                            id="name"
+                            type="text"
+                            placeholder="Enter service name"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">
+                            Category
+                        </label>
+
+                        <input
+                            id="category"
+                            type="text"
+                            placeholder="Enter category"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="price">
+                            Price (₹)
+                        </label>
+
+                        <input
+                            id="price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Enter price"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group description-field">
+                        <label for="description">
+                            Description
+                        </label>
+
+                        <textarea
+                            id="description"
+                            rows="4"
+                            placeholder="Enter service description"
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div class="button-field">
+                        <div class="service-form-actions">
+
+                            <button
+                                id="saveBtn"
+                                type="submit"
+                                class="btn btn-primary"
+                            >
+                                Add Service
+                            </button>
+
+                            <button
+                                id="cancelEditBtn"
+                                type="button"
+                                class="btn btn-secondary"
+                                hidden
+                            >
+                                Cancel
+                            </button>
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </form>
+        </section>
+
+        <section class="service-list-panel">
+
+            <div class="service-list-toolbar">
+
+                <div>
+                    <h2>
+                        All Services
+                    </h2>
+
+                    <p>
+                        View and manage the complete service catalogue.
+                    </p>
+                </div>
+
+                <label class="service-search-wrap">
+                    <span>⌕</span>
+
+                    <input
+                        id="serviceSearch"
+                        type="search"
+                        placeholder="Search services..."
+                        autocomplete="off"
+                    >
+                </label>
+
+            </div>
+
+            <div
+                id="serviceMessage"
+                class="page-message"
+            ></div>
+
+            <div id="serviceList"></div>
+
+        </section>
+
+    </main>
+
+    <script src="js/runtime-v80.js?v=8000"></script>
+    <script src="js/admin-services.js?v=2"></script>
+    <script src="js/ui-effects.js"></script>
+
+</body>
+</html>
